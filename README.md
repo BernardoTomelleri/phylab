@@ -25,9 +25,10 @@ with similar problems.
 ## Contents
 - The main module containing all the functions [lab](/lab.py).
 - A simple showcase of a couple of things this library allows you to do. [circfit](/circfit.py)
--- Finding the best-fitting circle and ellipse for simulated or real sampled data points.
--- A quick comparison between using `curve_fit`, an algebraic circle fit (weighted [Coope] method) and an algebraic ellipse fit.
--- Plotting the 3d chi-square landscape for two parameters of the circle or the ellipse.
+  - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
+  - A quick comparison between using `curve_fit`, an algebraic circle fit
+   (weighted [Coope] method) and an algebraic ellipse fit.
+  - Plotting the 3d chi-square landscape for two parameters of the circle or the ellipse.
 - Folder containing data that can be used in the demo(s).
 
 For further examples of where this module can come in handy feel free to check
@@ -35,24 +36,30 @@ out [FFT] and [Lock-in detector]. A small paper (in italiano) on fitting,
 computing Fourier transforms and/or simulating the effect of a Lock-in detector
 on real sampled signals or internally generated ones.
 
-### Model functions
+### model functions
 A few definitions of the model functions more commonly encountered in the first
-years of Physics lab (e.g. [dampened oscillator](/lab.py#L28), [square wave](/lab.py#L36))
-along with a few digital filters (e.g. [Butterworth](/lab.py#L69)).
+years of Physics lab (e.g. [dampened oscillator], [square wave])
+along with a few digital filters (e.g. [Butterworth]).
 Right at the beginning so you can immediately start adding the models you need.
 
-### Curve-fitting routines
+### testing and printing of fit results
+Goodness of fit tests, evaluation of parameter uncertainties and
+correlations  ([chi-square test], [errcor])
+Simple print formatters that allow you to quickly display the results
+of a fit and associated uncertainties with the desired number of significant
+digits. ([print correlations], [print parameters])
+
+### curve-fitting routines
 Weighted least-square fitting accounting for uncertainties on x and y axes
-with linear error propagation [propagated fit](/lab.py#L244), relying on
-[scipy.optimize.curve_fit].
+with linear error propagation ([propagated fit]), relying on [scipy.optimize.curve_fit].
 Weighted orthogonal distance regression thanks to [ODRPACK].
-Weighted algebraic fits, like [ellipse fit](/lab.py#L354) and others.
+Weighted algebraic fits (like [ellipse fit] and others).
 
 ### Fourier transform utilities
 Functions for computing real and complex signal FFTs and other
-quantities necessary for the calculation ([FFT](/lab.py#L431), [sampling](/lab.py#L512)),
+quantities necessary for the calculation ([FFT], [sampling]),
 applying window functions, and displaying their output through [Matplotlib]
-([plotfft](/lab.py#L468)).
+([plotfft]).
 
 ### data plotting
 Instead of having to write multiple calls to function in order to:
@@ -61,17 +68,12 @@ placing grids, setting errorbar sizes, etc.. (stuff that's present in
 almost all experimental graphs)
 You can set some sensible defaults for plots of fitted data, so you can
 do all of the above in a faster and less error-prone way.
-([grid](/lab.py#L206), [plot fit &  residuals](/lab.py#L405))
-
-### formatted printing of fit results
-Simple print formatters that allow you to quickly display the results
-of a fit and associated uncertainties with the desired number of significant
-digits. ([print correlations](/lab.py#L156), [print parameters](/lab.py#L163))
+([grid], [plot fit &  residuals])
 
 ### importing data from files
 Load a selected range of data from (.txt, .csv, .py, etc.) files as [Numpy]
 arrays, loop over files in a directory with a few calls to function.
-([measured range](/lab.py#L506), [file loop](/lab.py#L533))
+([measured range], [file loop])
 
 ## Development
 Any and all suggestions are always appreciated, If you want to contribute
@@ -89,14 +91,29 @@ and import it in your script.
 ## License
 Phy lab is licensed under the GNU General Public License v3.0 or later.
 
-[//]: # (These are reference links used in the body of this note and get
-stripped out when the markdown processor does its job. There is no need
-to format nicely because it shouldn't be seen.
+[//]: # (These are reference links used in the body of the readme and get
+stripped out by the markdown processor.
 See - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
    [FFT]: <https://github.com/BernardoTomelleri/FFT/blob/master/fft_plot.py>
    [Lock-in detector]: <https://github.com/BernardoTomelleri/FFT/blob/master/lockin.py>
    [coope]: <https://ir.canterbury.ac.nz/bitstream/handle/10092/11104/coope_report_no69_1992.pdf?sequence=1&isAllowed=y>
+   [dampened oscillator]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L28>
+   [square wave]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L36>
+   [Butterworth]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L69>
+   [chi-square test]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L99>
+   [errcor]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L147>
+   [print correlations]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L156>
+   [print parameters]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L163>
+   [propagated fit]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L244>
+   [ellipse fit]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L380>
+   [FFT]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L431>
+   [sampling]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L512>
+   [plotfft]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L468>
+   [grid]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L206>
+   [plot fit &  residuals]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L405>
+   [measured range]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L506>
+   [file loop]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L533>
    [SciPy]: <https://www.scipy.org/>   
    [NumPy]: <https://numpy.org/>
    [Matplotlib]: <https://matplotlib.org/stable/index.html>
