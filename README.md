@@ -28,7 +28,7 @@ with similar problems.
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
    (weighted [Coope] method) and an algebraic ellipse fit.
-  - Plotting the 3d <img src="https://rawgit.com/BernardoTomelleri/phylab/None/svgs/56935bc0db34a917432af2b1030714ab.svg?invert_in_darkmode" align=middle width=68.59868565pt height=26.76175259999998pt/> surface for the coordinates of the circle or the ellipse.
+  - Plotting the 3d <img src="svgs/56935bc0db34a917432af2b1030714ab.svg?invert_in_darkmode" align=middle width=68.59868565pt height=26.76175259999998pt/> surface for the coordinates of the circle or the ellipse.
 - Folder containing data that can be used in the demo(s).
 
 For further examples of where this module can come in handy feel free to check
