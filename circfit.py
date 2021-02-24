@@ -9,11 +9,11 @@ from lab import (np, plt, chitest, grid, errcor, std_unc, prnpar, prncor,
                  chisq, pltfitres, tick, coope, circ, crcfit, elpfit)
 
 ''' Variables that control the script '''
-gen = True # generate measured points around circumference
+gen = False # generate measured points around circumference
 con = False # show confidence interval for circle fit
 tex = True # LaTeX typesetting maths and descriptions
 # (center coordinates x, y, radius or major semiaxis, minor semiaxis, tilt /x)
-init = (6, 6, 10, None, None, 1); npts = 50
+init = (1, 2, 3, None, None, 1); npts = 50
 
 def parel(Xc, Yc, a, b=None, tilt=None, arc=1, step=1000):
     if not b: b = a
@@ -100,11 +100,11 @@ if con:
 for ax in axs: ax.legend(loc ='best')
 
 # Data for the 3D plot
-xcen = np.linspace(pars[0] - 10*perr[0], pars[0] + 10*perr[0], 50)
-ycen = np.linspace(pars[1] - 10*perr[1], pars[1] + 10*perr[1], 50)
-Z = np.array(chisq(x=data, y=rsq, model=circle, alpha=xcen, beta=ycen,
+a_range = np.linspace(pars[0] - 10*perr[0], pars[0] + 10*perr[0], 50)
+b_range = np.linspace(pars[1] - 10*perr[1], pars[1] + 10*perr[1], 50)
+Z = np.array(chisq(x=data, y=rsq, model=circle, alpha=a_range, beta=b_range,
                    varnames = ['Xc', 'Yc'], pars=pars, dy=None))
-X, Y = np.meshgrid(xcen, ycen)
+X, Y = np.meshgrid(a_range, b_range)
 
 # Plot the Chi square surface for circle fit
 fig = plt.figure()
