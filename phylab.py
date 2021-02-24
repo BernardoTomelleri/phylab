@@ -8,6 +8,7 @@ import os
 import glob
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import cm
 from scipy.optimize import curve_fit
 from scipy.odr import odrpack
 from scipy import signal as sg
@@ -45,14 +46,14 @@ def modpar(x, A, T, phs=0, ofs=0):
     else:
         return (A*(3*x -(2*x**2)/T - T) + ofs)
 
-def parabola(vect, A, T, phs=0, ofs=0):
+def parabola(x_range, A, T, phs=0, ofs=0):
     """ Implementation of series of parabolae from integral of trg(x) """
     y = []
-    for x in vect:
+    for x in x_range:
         y.append(modpar((x+phs)%T, A, T, ofs))
     return y
 
-def circ(coords, Xc=0, Yc=0, Rc=1):
+def coope_circ(coords, Xc=0, Yc=0, Rc=1):
     x, y = coords
     return Xc*x + Yc*y + Rc
 
@@ -153,9 +154,9 @@ def chisq(x, y, model, alpha, beta, varnames, pars=None, dy=None):
         ordered_pars[idxs[0]] = a; ordered_pars[idxs[1]] = b
         return model(x, *ordered_pars)
     if dy is None:
-        return [[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta]
+        return np.array([[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta])
     else:
-        return [[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta]
+        return np.array([[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta])
 
 def errcor(covm):
     """ Computes parameter error and correlation matrix from covariance. """
@@ -189,6 +190,11 @@ def RMSE(seq, exp=None):
     if not exp: exp = RMS(seq)
     return np.sqrt(np.mean(np.square(seq - exp)))
 
+def abs_devs(seq, around=None):
+    """ Evaluates absolute deviations around a central value or expected data sequence."""
+    if around: return np.abs(seq - around)
+    return np.abs(seq - np.median(seq))
+
 def FWHM(x, y, FT=None):
     """ Evaluates FWHM of fundamental peak for y over dynamic variable x. """
     if FT: x=np.fft.fftshift(x); y=np.abs(np.fft.fftshift(y))
@@ -215,53 +221,8 @@ def ldec(seq, upb=None):
     if all(bol.all() == True for bol in check): return True
     return False
     
-# UTILITIES FOR MANAGING FIGURE AXES AND PLOTS
-def grid(ax, xlab = None, ylab = None):
-    """ Adds standard grid and labels for measured data plots to ax. """
-    ax.grid(color = 'gray', ls = '--', alpha=0.7)
-    ax.set_xlabel('%s' %(xlab if xlab else 'x [a.u.]'), 
-                  x=0.9 - len(xlab)/500 if xlab else 0.9)
-    ax.set_ylabel('%s' %(ylab if ylab else 'y [a.u.]'))
-    ax.minorticks_on()
-    ax.tick_params(direction='in', length=4, width=1., top=True, right=True)
-    ax.tick_params(which='minor', direction='in', width=1., top=True, right=True)
-    return ax
-    
-def tick(ax, xmaj=None, xmin=None, ymaj=None, ymin=None, zmaj=None, zmin=None):
-    """ Adds linearly spaced ticks to ax. """
-    if not xmin: xmin = xmaj/5. if xmaj else None
-    if not ymin: ymin = ymaj/5. if xmaj else None
-    if xmaj: ax.xaxis.set_major_locator(plt.MultipleLocator(xmaj))
-    if xmin: ax.xaxis.set_minor_locator(plt.MultipleLocator(xmin))
-    if ymaj: ax.yaxis.set_major_locator(plt.MultipleLocator(ymaj))
-    if ymin: ax.yaxis.set_minor_locator(plt.MultipleLocator(ymin))
-    if zmaj: ax.zaxis.set_major_locator(plt.MultipleLocator(zmaj))
-    if zmin: ax.zaxis.set_minor_locator(plt.MultipleLocator(zmin))
-    return ax
-
-def logx(ax, tix=None):
-    """ Log-scales x-axis, can add tix logarithmically spaced ticks to ax. """
-    ax.set_xscale('log')
-    if tix:
-        ax.xaxis.set_major_locator(plt.LogLocator(numticks=tix))
-        ax.xaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
-                                                  numticks = tix))
-def logy(ax, tix=None):
-    """ Log-scales y-axis, can add tix logarithmically spaced ticks to ax. """
-    ax.set_yscale('log')
-    if tix:
-        ax.yaxis.set_major_locator(plt.LogLocator(numticks=tix))
-        ax.yaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
-                                                  numticks = tix))
-def logz(ax, tix=None):
-    """ Log-scales z-axis, can add tix logarithmically spaced ticks to ax. """
-    ax.set_zscale('log')
-    if tix:
-        ax.zaxis.set_major_locator(plt.LogLocator(numticks=tix))
-        ax.zaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
-                                                  numticks = tix))
                                                   
-# LEAST SQUARE FITTING ROUTINES AND OUTPUT GRAPHS
+# LEAST SQUARE FITTING ROUTINES
 # Scipy.curve_fit with horizontal error propagation 
 def propfit(xmes, dx, ymes, dy, model, p0=None, max_iter=20, thr=5, tail=3, tol=0.5, v=False):
     """ Modified non-linear least squares (curve_fit) algorithm to
@@ -385,11 +346,12 @@ def outlier(xmes, dx, ymes, dy, model, pars, thr=5, out=False):
     
     return xmes[isin], dx[isin], ymes[isin], dy[isin]
 
-def medianout(data, margin=2.):
-    devs = np.abs(data - np.median(data))
-    normdevs = devs/np.median(devs)
-    return data[normdevs < margin]
-    
+def medianout(data, thr=2.):
+    devs = abs_devs(data)
+    n_sigmas = devs/np.median(devs)
+    return data[n_sigmas < thr]
+
+# Circular and elliptical fit functions    
 def coope(coords, weights=None):
     npts = len(coords[0]); coords = np.asarray(coords)
     if weights is not None and len(weights) != npts: raise Exception
@@ -404,6 +366,18 @@ def coope(coords, weights=None):
     center = 0.5*sol[:-1]; radius = np.sqrt(sol[-1] + center.T.dot(center))
     return center, radius
 
+def crcfit(coords, uncerts=None, p0=None):
+    rsq = (coords**2).sum(axis=0)
+    dr = (uncerts**2).sum(axis=0) if uncerts else None
+    
+    popt, pcov = curve_fit(f=coope_circ, xdata=coords, ydata=rsq, sigma=dr, p0=p0)
+    # recover original variables from Coope transformation
+    popt[:-1]/=2.
+    popt[-1] = np.sqrt(popt[-1] + (popt[:-1]**2).sum(axis=0))
+    pcov[:-1, :-1]/=2.
+    pcov.T[-1] = pcov[-1] = 0.5*np.sqrt(np.abs(pcov[-1]))
+    return popt, pcov
+
 def elpfit(coords, uncerts=None):
     x, y = coords; x = np.atleast_2d(x).T; y = np.atleast_2d(y).T
     A = np.column_stack([x**2, x*y, y**2, x, y])
@@ -416,19 +390,87 @@ def elpfit(coords, uncerts=None):
         print('Covariance of parameters could not be estimated')
         pcov=None
     return sol, chisq, pcov
-    
-def crcfit(coords, uncerts=None, p0=None):
-    rsq = (coords**2).sum(axis=0)
-    dr = (uncerts**2).sum(axis=0) if uncerts else None
-    
-    popt, pcov = curve_fit(f=circ, xdata=coords, ydata=rsq, sigma=dr, p0=p0)
-    # recover original variables from Coope transformation
-    popt[:-1]/=2.
-    popt[-1] = np.sqrt(popt[-1] + (popt[:-1]**2).sum(axis=0))
-    pcov[:-1, :-1]/=2.
-    pcov.T[-1] = pcov[-1] = 0.5*np.sqrt(np.abs(pcov[-1]))
-    return popt, pcov
 
+def Ell_coords(Xc, Yc, a, b=None, angle=None, arc=1, N=1000):
+    """ Creates N pairs of linearly spaced (x, y) coordinates along an ellipse
+    with center coordinates (Xc, Yc); major and minor semiaxes a, b and inclination
+    angle (counter-clockwise) between x-axis and major axis. Can create arcs
+    of circles by limiting eccentric anomaly between 0 <= t <= arc*2*pi."""
+    if not b: b = a
+    elif b > a: a, b = b, a
+    theta = np.linspace(0, 2*np.pi*arc, num=N)
+    if angle:
+        x = np.cos(angle)*a*np.cos(theta) - np.sin(angle)*b*np.sin(theta) + Xc
+        y = np.sin(angle)*a*np.cos(theta) + np.cos(angle)*b*np.sin(theta) + Yc
+    else:
+        x = a*np.cos(theta) + Xc
+        y = b*np.sin(theta) + Yc
+    return x, y
+    
+def Ell_imp2std(A, B, C, D, E, F):
+    DEL = B**2 - 4*A*C; DIS = 2*(A*E**2 + C*D**2 - B*D*E + DEL*F)
+    a = -np.sqrt(DIS*((A+C) + np.sqrt((A - C)**2 + B**2)))/DEL
+    b = -np.sqrt(DIS*((A+C) - np.sqrt((A - C)**2 + B**2)))/DEL
+    Xc = (2*C*D - B*E)/DEL; Yc = (2*A*E - B*D)/DEL
+    if B != 0: tilt = np.arctan(1./B *(C - A - np.sqrt((A - C)**2 + B**2)))
+    else: tilt = 0.5*np.pi if A > C else 0 
+    return np.asarray([Xc, Yc, a, b, tilt])
+
+def Ell_std2imp(Xc, Yc, a, b, angle):
+    if b > a: a, b = b, a
+    A = a**2 *np.sin(angle)**2 + b**2 * np.cos(angle)**2  
+    B = 2*(b - a)**2 *np.sin(angle)*np.sin(angle)
+    C = a**2 *np.cos(angle)**2 + b**2 * np.sin(angle)**2
+    D = -(2*A*Xc + B*Yc)
+    E = -(B*Xc + 2*C*Yc)
+    F = A*Xc**2 + B*Xc*Yc + C*Yc**2 - (a*b)**2
+    return np.array([A, B, C, D, E, F])
+
+# UTILITIES FOR MANAGING FIGURE AXES AND OUTPUT GRAPHS
+def grid(ax, xlab = None, ylab = None):
+    """ Adds standard grid and labels for measured data plots to ax. """
+    ax.grid(color = 'gray', ls = '--', alpha=0.7)
+    ax.set_xlabel('%s' %(xlab if xlab else 'x [a.u.]'), 
+                  x=0.9 - len(xlab)/500 if xlab else 0.9)
+    ax.set_ylabel('%s' %(ylab if ylab else 'y [a.u.]'))
+    ax.minorticks_on()
+    ax.tick_params(direction='in', length=4, width=1., top=True, right=True)
+    ax.tick_params(which='minor', direction='in', width=1., top=True, right=True)
+    return ax
+    
+def tick(ax, xmaj=None, xmin=None, ymaj=None, ymin=None, zmaj=None, zmin=None):
+    """ Adds linearly spaced ticks to ax. """
+    if not xmin: xmin = xmaj/5. if xmaj else None
+    if not ymin: ymin = ymaj/5. if xmaj else None
+    if xmaj: ax.xaxis.set_major_locator(plt.MultipleLocator(xmaj))
+    if xmin: ax.xaxis.set_minor_locator(plt.MultipleLocator(xmin))
+    if ymaj: ax.yaxis.set_major_locator(plt.MultipleLocator(ymaj))
+    if ymin: ax.yaxis.set_minor_locator(plt.MultipleLocator(ymin))
+    if zmaj: ax.zaxis.set_major_locator(plt.MultipleLocator(zmaj))
+    if zmin: ax.zaxis.set_minor_locator(plt.MultipleLocator(zmin))
+    return ax
+
+def logx(ax, tix=None):
+    """ Log-scales x-axis, can add tix logarithmically spaced ticks to ax. """
+    ax.set_xscale('log')
+    if tix:
+        ax.xaxis.set_major_locator(plt.LogLocator(numticks=tix))
+        ax.xaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
+                                                  numticks = tix))
+def logy(ax, tix=None):
+    """ Log-scales y-axis, can add tix logarithmically spaced ticks to ax. """
+    ax.set_yscale('log')
+    if tix:
+        ax.yaxis.set_major_locator(plt.LogLocator(numticks=tix))
+        ax.yaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
+                                                  numticks = tix))
+def logz(ax, tix=None):
+    """ Log-scales z-axis, can add tix logarithmically spaced ticks to ax. """
+    ax.set_zscale('log')
+    if tix:
+        ax.zaxis.set_major_locator(plt.LogLocator(numticks=tix))
+        ax.zaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
+                                                  numticks = tix))
 def pltfitres(xmes, dx, ymes, dy=None, model=None, pars=None, out=None):
 # Variables that control the script 
     # kwargs.setdefault(
@@ -454,7 +496,62 @@ def pltfitres(xmes, dx, ymes, dy=None, model=None, pars=None, out=None):
     ax2.axhline(0, c='r', alpha=0.7, zorder=10)
     return fig, (ax1, ax2)
 
+def plot3d(x, y, z, xlab=None, ylab=None, zlab=None):
+    X, Y = np.meshgrid(x, y); Z=np.atleast_1d(z)
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
+                       linewidth=0, antialiased=False, alpha=0.6)
+    ax.contour(X, Y, Z, zdir='z', offset=0, cmap=cm.jet)
+    ax.set_xlabel('%s' %(xlab if xlab else 'x [a.u.]'))
+    ax.set_ylabel('%s' %(ylab if ylab else 'y [a.u.]'))
+    ax.set_zlabel('%s' %(zlab if zlab else 'z [a.u.]'))
+    return fig, ax
+
+def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=False):
+    fft = tran.real if re_im  else np.abs(tran)
+    if norm: fft/=np.max(fft)
+    if dB: fft = 20*np.log10(np.abs(fft))
+    if mod_ph or re_im:
+        fig, (ax1, ax2) = plt.subplots(2,1, sharex=True,
+                                       gridspec_kw={'wspace':0.05, 'hspace':0.05})
+    else: fig, (ax2, ax1) = plt.subplots(2, 1,
+                                         gridspec_kw={'wspace':0.25, 'hspace':0.25}) 
+    ax1 = grid(ax1, xlab = 'Frequency $f$ [Hz]')
+    ax1.plot(freq, fft, c='k', lw='0.9')
+    ax1.set_ylabel('$\widetilde{V}(f)$ Magnitude [%s]' %('dB' if dB else 'arb. un.'))
+    if re_im: ax1.set_ylabel('Fourier Transform [Re]')    
+
+    ax2 = grid(ax2, 'Time $t$ [s]', '$V(t)$ [arb. un.]')
+    if mod_ph or re_im: 
+        fft = tran.imag if re_im else np.angle(tran)
+        ax2.plot(freq, fft, c='k', lw='0.9')
+        ax2.set_xlabel('Frequency $f$ [Hz]'); 
+        ax2.set_ylabel('$\widetilde{V}(f)$ Phase [rad]')
+        if re_im: ax2.set_ylabel('Fourier Transform [Im]')    
+    else:
+        xmes, dx, ymes, dy = signal
+        #ax2.plot(xmes, ymes, 'ko', ms=0.5, ls='-', lw=0.7, label='data')
+        ax2.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.2, elinewidth=0.8,
+                     capsize= 1.1, ls='', lw=0.7, label='data', zorder=5)
+    if signal: ax1, ax2 = [ax2, ax1]
+    return fig, (ax1, ax2)
+
 # UTILITIES FOR FOURIER TRANSFORMS OF DATA ARRAYS
+def sampling(space, dev=None, v=False):
+    """ Evaluates average sampling interval Dx and its standard deviation. """ 
+    Deltas=np.zeros(len(space)-1)
+    sort=np.sort(space)
+    for i in range(len(Deltas)):
+        Deltas[i] = sort[i+1] - sort[i]
+    Dxavg=np.mean(Deltas)
+    Dxstd=np.std(Deltas)
+    if v:
+        print(f"Delta t average = {Dxavg:.2e} s" )
+        print(f"Delta t stdev = {Dxstd:.2e}")
+    if dev: return Dxavg, Dxstd
+    return Dxavg
+
 def FFT(time, signal, window=None, beta=0, specres=None):
     """
     Computes Discrete Fourier Transform of signal and its frequency space.
@@ -491,35 +588,6 @@ def FFT(time, signal, window=None, beta=0, specres=None):
     freq = np.fft.rfftfreq(fftsize, d=fres)
     if not specres: return freq, tran, fres, frstd
     return freq, tran
-
-def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=False):
-    fft = tran.real if re_im  else np.abs(tran)
-    if norm: fft/=np.max(fft)
-    if dB: fft = 20*np.log10(np.abs(fft))
-    if mod_ph or re_im:
-        fig, (ax1, ax2) = plt.subplots(2,1, sharex=True,
-                                       gridspec_kw={'wspace':0.05, 'hspace':0.05})
-    else: fig, (ax2, ax1) = plt.subplots(2, 1,
-                                         gridspec_kw={'wspace':0.25, 'hspace':0.25}) 
-    ax1 = grid(ax1, xlab = 'Frequency $f$ [Hz]')
-    ax1.plot(freq, fft, c='k', lw='0.9')
-    ax1.set_ylabel('$\widetilde{V}(f)$ Magnitude [%s]' %('dB' if dB else 'arb. un.'))
-    if re_im: ax1.set_ylabel('Fourier Transform [Re]')    
-
-    ax2 = grid(ax2, 'Time $t$ [s]', '$V(t)$ [arb. un.]')
-    if mod_ph or re_im: 
-        fft = tran.imag if re_im else np.angle(tran)
-        ax2.plot(freq, fft, c='k', lw='0.9')
-        ax2.set_xlabel('Frequency $f$ [Hz]'); 
-        ax2.set_ylabel('$\widetilde{V}(f)$ Phase [rad]')
-        if re_im: ax2.set_ylabel('Fourier Transform [Im]')    
-    else:
-        xmes, dx, ymes, dy = signal
-        #ax2.plot(xmes, ymes, 'ko', ms=0.5, ls='-', lw=0.7, label='data')
-        ax2.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.2, elinewidth=0.8,
-                     capsize= 1.1, ls='', lw=0.7, label='data', zorder=5)
-    if signal: ax1, ax2 = [ax2, ax1]
-    return fig, (ax1, ax2)
     
 # UTILITIES FOR MANAGING DATA FILES
 def srange(data, x, x_min=0, x_max=1e9):
@@ -536,20 +604,6 @@ def mesrange(x, dx, y, dy, x_min=0, x_max=1e9):
     sy = srange(y, x, x_min, x_max); sdy = srange(dy, x, x_min, x_max)
     return sx, sdx, sy, sdy
     
-def sampling(space, dev=None, v=False):
-    """ Evaluates average sampling interval Dx and its standard deviation. """ 
-    Deltas=np.zeros(len(space)-1)
-    sort=np.sort(space)
-    for i in range(len(Deltas)):
-        Deltas[i] = sort[i+1] - sort[i]
-    Dxavg=np.mean(Deltas)
-    Dxstd=np.std(Deltas)
-    if v:
-        print(f"Delta t average = {Dxavg:.2e} s" )
-        print(f"Delta t stdev = {Dxstd:.2e}")
-    if dev: return Dxavg, Dxstd
-    return Dxavg
-
 def std_unc(measure, ADC=None):
     """ Associates default uncertainty to measured data array."""
     V = np.asarray(measure)

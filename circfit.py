@@ -4,9 +4,8 @@ Created on Fri Feb 19 16:48:23 2021
 
 @author: berni
 """
-from matplotlib import cm
-from lab import (np, plt, chitest, grid, errcor, std_unc, prnpar, prncor,
-                 chisq, pltfitres, tick, coope, circ, crcfit, elpfit)
+from phylab import (np, plt, grid, std_unc, prnpar, errcor, Ell_coords)
+import phylab as lab
 
 ''' Variables that control the script '''
 gen = False # generate measured points around circumference
@@ -15,33 +14,17 @@ tex = True # LaTeX typesetting maths and descriptions
 # (center coordinates x, y, radius or major semiaxis, minor semiaxis, tilt /x)
 init = (1, 2, 3, None, None, 1); npts = 50
 
-def parel(Xc, Yc, a, b=None, tilt=None, arc=1, step=1000):
-    if not b: b = a
-    elif b > a: a, b = b, a
-    theta = np.linspace(0, 2*np.pi*arc, step)
-    if tilt:
-        x = np.cos(tilt)*a*np.cos(theta) - np.sin(tilt)*b*np.sin(theta) + Xc
-        y = np.sin(tilt)*a*np.cos(theta) + np.cos(tilt)*b*np.sin(theta) + Yc
-    else:
-        x = a*np.cos(theta) + Xc
-        y = b*np.sin(theta) + Yc
-    return x, y
-
-def canel(impars):
-    A, B, C, D, E = impars; F = -1
-    DEL = B**2 - 4*A*C; DIS = 2*(A*E**2 + C*D**2 - B*D*E + DEL*F)
-    a = -np.sqrt(DIS*((A+C) + np.sqrt((A - C)**2 + B**2)))/DEL
-    b = -np.sqrt(DIS*((A+C) - np.sqrt((A - C)**2 + B**2)))/DEL
-    Xc = (2*C*D - B*E)/DEL; Yc = (2*A*E - B*D)/DEL
-    tilt = np.arctan(1./B *(C - A - np.sqrt((A - C)**2 + B**2))) if B != 0 else (0 if B == 0 and A < C else 0.5*np.pi)
-    return np.asarray([Xc, Yc, a, b, tilt])
-
-def circle(coords, Xc=0, Yc=0, R=1):
+def circ_dist(coords, Xc=0, Yc=0, R=1):
     x, y = coords
     return 2*Xc*x + 2*Yc*y + (R**2 - Xc**2 - Yc**2)
 
+def elps_dist(coords, Xc=0, Yc=0, a=1, b=1, angle=0):
+    x, y = coords
+    A, B, C, D, E, F = lab.Ell_std2imp(Xc, Yc, a, b, angle)
+    return A*x**2 + B*x*y + C*y**2 + D*x + E*y + F
+
 if gen:
-    data = np.asarray(parel(*init, step=npts))
+    data = np.asarray(Ell_coords(*init, step=npts))
     noise = np.random.normal(loc=0, scale=0.1*init[2], size=data.shape)
     data += noise
 else: data = np.loadtxt('./data/circ.txt', unpack=True)
@@ -49,23 +32,23 @@ dx = std_unc(data[0]); dy = std_unc(data[1]);
 rsq = (data**2).sum(axis=0); dr = np.sqrt(dx**2 + dy**2)
 
 # weighted Coope method
-cen, rad = coope(data, weights=1./dr)
+cen, rad = lab.coope(data, weights=1./dr)
 
 # Scipy's curve_fit
-pars, covm = crcfit(data, p0=init[:3])
+pars, covm = lab.crcfit(data, p0=init[:3])
 perr, pcor = errcor(covm)
-prnpar(pars, perr, circ)
+prnpar(pars, perr, circ_dist)
 
 # algebraic elliptical fit
-sol, chi2, pcov = elpfit(data, uncerts=dr)
-p = canel(sol).squeeze()
+sol, chi2, pcov = lab.elpfit(data, uncerts=dr)
+p = lab.Ell_imp2std(*np.append(sol, -1)).squeeze()
 if chi2.size > 0:
-    unc, cor = errcor(pcov)
-    prnpar(p, unc, manual=['Xc', 'Yc', 'a', 'b', 'tilt'])
+    unc, cor = lab.errcor(pcov)
+    prnpar(p, unc, manual=['Xc', 'Yc', 'a', 'b', 'angle'])
 else: unc = np.zeros_like(sol)
 
 if tex: plt.rc('text', usetex=True); plt.rc('font', family='serif')
-xCop, yCop = parel(*cen, rad); xfit, yfit = parel(*pars); xEl, yEl = parel(*p)
+xCop, yCop = Ell_coords(*cen, rad); xfit, yfit = Ell_coords(*pars); xEl, yEl = Ell_coords(*p)
 fig, axs = plt.subplots(1,2, sharex=True); axc = axs[0]; axe = axs[1]
 for ax in axs:
     grid(ax); ax.axis('equal')
@@ -79,41 +62,36 @@ axc.plot(xfit, yfit, c='y', ls='--', lw=0.8, zorder=10, alpha=0.6, label='circle
 axc.errorbar(*pars[:-1], *perr[:-1],'yo', ms=1.5, elinewidth=0.9, capsize= 1.2,
         ls='', label='circle fit center')
 if con: 
-    axc.plot(*parel(*pars[:-1], a=pars[-1] + perr[-1]), c='r', ls='--', lw=0.8,
+    axc.plot(*Ell_coords(*pars[:-1], a=pars[-1] + perr[-1]), c='r', ls='--', lw=0.8,
             zorder=10, alpha=0.6, label='circle fit $r + dr$')
-    axc.plot(*parel(*pars[:-1], a=pars[-1] - perr[-1]), c='b', ls='--', lw=0.8,
+    axc.plot(*Ell_coords(*pars[:-1], a=pars[-1] - perr[-1]), c='b', ls='--', lw=0.8,
             zorder=10, alpha=0.6, label='circle fit $r - dr$')
 
-# Plot fitted and original (noiseless) ellipses
+# Plot fitted and initially generated (noiseless) ellipses
 axe.plot(xEl, yEl, c='m', ls='--', lw=0.8, zorder=10, alpha=0.6, label='best-fit ellipse')
 axe.errorbar(p[0], p[1], unc[1], unc[0], 'mo', ms=1.5, elinewidth=0.9,
             capsize= 1.2, label='ellipse center')
 if gen: 
-    axe.plot(*parel(*init, step=npts), c='pink', ls='-', lw=1,
+    axe.plot(*Ell_coords(*init, step=npts), c='pink', ls='-', lw=1,
                 zorder=10, alpha=0.6, label='generated ellipse')
     axe.plot(init[0], init[1], c='pink', marker='.', label='generated center')
 if con:
-     axe.plot(*parel(*p[:2], a=p[2] + unc[2], b=p[3] + unc[3], tilt=p[-1]), ls='--', lw=0.8,
+     axe.plot(*Ell_coords(*p[:2], a=p[2] + unc[2], b=p[3] + unc[3], angle=p[-1]), ls='--', lw=0.8,
             zorder=10, alpha=0.6, label='ellipse fit $a + da$, $b + db$')
-     axe.plot(*parel(*p[:2], a=p[2] - unc[2], b=p[3] - unc[3], tilt=p[-1]), ls='--', lw=0.8,
+     axe.plot(*Ell_coords(*p[:2], a=p[2] - unc[2], b=p[3] - unc[3], angle=p[-1]), ls='--', lw=0.8,
              zorder=10, alpha=0.6, label='ellipse fit $a - da$, $b - db$')
 for ax in axs: ax.legend(loc ='best')
 
-# Data for the 3D plot
+# Plot the Chi square surface for circle's center coordinates
 a_range = np.linspace(pars[0] - 10*perr[0], pars[0] + 10*perr[0], 50)
 b_range = np.linspace(pars[1] - 10*perr[1], pars[1] + 10*perr[1], 50)
-Z = np.array(chisq(x=data, y=rsq, model=circle, alpha=a_range, beta=b_range,
-                   varnames = ['Xc', 'Yc'], pars=pars, dy=None))
-X, Y = np.meshgrid(a_range, b_range)
+chi_ab = lab.chisq(x=data, y=rsq, model=circ_dist, alpha=a_range, beta=b_range,
+                   varnames = ['Xc', 'Yc'], pars=pars, dy=None)
 
-# Plot the Chi square surface for circle fit
-fig = plt.figure()
-frame = fig.add_subplot(projection='3d')
-frame.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
-                   linewidth=0, antialiased=False, alpha=0.6)
-cset = frame.contour(X, Y, Z, zdir='z', offset=0, cmap=cm.jet); frame.set_zlim(0, np.max(Z))
-frame.set_xlabel('$x_c$'); frame.set_ylabel('$y_c$'); frame.set_zlabel('$\chi^2(x_c, y_c)$')
-if tex: frame.set_title(r'$\displaystyle \chi^2(x_c, y_c) = \sum_{i=1}^n'
+fig3d, ax3d = lab.plot3d(x=a_range, y=b_range, z=chi_ab, xlab='$x_c$', ylab='$y_c$',
+                         zlab='$\chi^2(x_c, y_c)$')
+ax3d.set_zlim(0, None)
+if tex: ax3d.set_title(r'$\displaystyle \chi^2(x_c, y_c) = \sum_{i=1}^n'
                 r'\left(\frac{r_i^2 - (2x_c x_i + 2y_c y_i + R_c^2)}{\sigma_{r^2_i}}\right)^2$'
                 r'of circle fit $(x_i^2 + y_i^2 := r_i^2)$' , fontsize=12)
 plt.show()
