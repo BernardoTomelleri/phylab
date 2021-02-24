@@ -44,7 +44,7 @@ Right at the beginning so you can immediately start adding the models you need.
 
 ### testing and printing of fit results
 Goodness of fit tests, evaluation of parameter uncertainties and
-correlations  ([chi-square test], [errcor])
+correlations  ([chi-square test], [errcor]).
 Simple print formatters that allow you to quickly display the results
 of a fit and associated uncertainties with the desired number of significant
 digits. ([print correlations], [print parameters])

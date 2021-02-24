@@ -9,11 +9,11 @@ from lab import (np, plt, chitest, grid, errcor, std_unc, prnpar, prncor,
                  chisq, pltfitres, tick, coope, circ, crcfit, elpfit)
 
 ''' Variables that control the script '''
-gen = False # generate measured points around circumference
+gen = True # generate measured points around circumference
 con = False # show confidence interval for circle fit
 tex = True # LaTeX typesetting maths and descriptions
 # (center coordinates x, y, radius or major semiaxis, minor semiaxis, tilt /x)
-init = (0, 0, 1, None, None, 1); npts = 50
+init = (6, 6, 10, None, None, 1); npts = 50
 
 def parel(Xc, Yc, a, b=None, tilt=None, arc=1, step=1000):
     if not b: b = a
@@ -35,6 +35,10 @@ def canel(impars):
     Xc = (2*C*D - B*E)/DEL; Yc = (2*A*E - B*D)/DEL
     tilt = np.arctan(1./B *(C - A - np.sqrt((A - C)**2 + B**2))) if B != 0 else (0 if B == 0 and A < C else 0.5*np.pi)
     return np.asarray([Xc, Yc, a, b, tilt])
+
+def circle(coords, Xc=0, Yc=0, R=1):
+    x, y = coords
+    return 2*Xc*x + 2*Yc*y + (R**2 - Xc**2 - Yc**2)
 
 if gen:
     data = np.asarray(parel(*init, step=npts))
@@ -98,7 +102,8 @@ for ax in axs: ax.legend(loc ='best')
 # Data for the 3D plot
 xcen = np.linspace(pars[0] - 10*perr[0], pars[0] + 10*perr[0], 50)
 ycen = np.linspace(pars[1] - 10*perr[1], pars[1] + 10*perr[1], 50)
-Z = np.array(chisq(x=data, y=rsq, model=circ, alpha=xcen, beta=ycen, cpars=[pars[-1]], dy=None))
+Z = np.array(chisq(x=data, y=rsq, model=circle, alpha=xcen, beta=ycen,
+                   varnames = ['Xc', 'Yc'], pars=pars, dy=None))
 X, Y = np.meshgrid(xcen, ycen)
 
 # Plot the Chi square surface for circle fit

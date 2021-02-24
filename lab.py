@@ -52,9 +52,13 @@ def parabola(vect, A, T, phs=0, ofs=0):
         y.append(modpar((x+phs)%T, A, T, ofs))
     return y
 
-def circ(coords, Xc=0, Yc=0, R=1):
+def circ(coords, Xc=0, Yc=0, Rc=1):
     x, y = coords
-    return Xc*x + Yc*y + R
+    return Xc*x + Yc*y + Rc
+
+def elps(coords, A, B, C, D, E):
+    x, y = coords
+    return A*x**2, B*x*y + C*y**2 + D*x + E*y -1
 
 def fder(f, x, pars):
     return np.gradient(f(x, *pars), 1)
@@ -109,7 +113,7 @@ def chitest(data, unc, model, ddof=0, gauss=False, v=False):
     if v: print('Chi square/ndof = %.1f/%d' % (chisq, ndof))
     return chisq, ndof, resn
 
-def chisq(x, y, model, alpha, beta, cpars=None, dy=None):
+def chisq(x, y, model, alpha, beta, varnames, pars=None, dy=None):
     """
     Chi-square as a function of two model function parameters (alpha, beta),
     while all others are constrained/constant.
@@ -139,10 +143,19 @@ def chisq(x, y, model, alpha, beta, cpars=None, dy=None):
         of alpha and beta. Shape is (len(alpha), len(beta)).
 
     """
+    parnames = getfullargspec(model)[0][1:]
+    fixed = [name not in varnames for name in parnames]
+    constant_pars_indexes = np.argwhere(fixed)
+    ordered_pars = np.zeros(len(parnames))
+    for idx in constant_pars_indexes: ordered_pars[idx] = pars[idx]
+    def fxmodel(a, b):
+        idxs = np.argwhere(np.invert(fixed))
+        ordered_pars[idxs[0]] = a; ordered_pars[idxs[1]] = b
+        return model(x, *ordered_pars)
     if dy is None:
-        return [[((y - model(x, a, b, *cpars))**2).sum() for a in alpha] for b in beta]
+        return [[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta]
     else:
-        return [[(((y - model(x, a, b, *cpars))/dy)**2).sum() for a in alpha] for b in beta]
+        return [[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta]
 
 def errcor(covm):
     """ Computes parameter error and correlation matrix from covariance. """
@@ -214,7 +227,7 @@ def grid(ax, xlab = None, ylab = None):
     ax.tick_params(which='minor', direction='in', width=1., top=True, right=True)
     return ax
     
-def tick(ax, xmaj = None, xmin = None, ymaj = None, ymin = None):
+def tick(ax, xmaj=None, xmin=None, ymaj=None, ymin=None, zmaj=None, zmin=None):
     """ Adds linearly spaced ticks to ax. """
     if not xmin: xmin = xmaj/5. if xmaj else None
     if not ymin: ymin = ymaj/5. if xmaj else None
@@ -222,6 +235,8 @@ def tick(ax, xmaj = None, xmin = None, ymaj = None, ymin = None):
     if xmin: ax.xaxis.set_minor_locator(plt.MultipleLocator(xmin))
     if ymaj: ax.yaxis.set_major_locator(plt.MultipleLocator(ymaj))
     if ymin: ax.yaxis.set_minor_locator(plt.MultipleLocator(ymin))
+    if zmaj: ax.zaxis.set_major_locator(plt.MultipleLocator(zmaj))
+    if zmin: ax.zaxis.set_minor_locator(plt.MultipleLocator(zmin))
     return ax
 
 def logx(ax, tix=None):
@@ -238,7 +253,14 @@ def logy(ax, tix=None):
         ax.yaxis.set_major_locator(plt.LogLocator(numticks=tix))
         ax.yaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
                                                   numticks = tix))
-
+def logz(ax, tix=None):
+    """ Log-scales z-axis, can add tix logarithmically spaced ticks to ax. """
+    ax.set_zscale('log')
+    if tix:
+        ax.zaxis.set_major_locator(plt.LogLocator(numticks=tix))
+        ax.zaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
+                                                  numticks = tix))
+                                                  
 # LEAST SQUARE FITTING ROUTINES AND OUTPUT GRAPHS
 # Scipy.curve_fit with horizontal error propagation 
 def propfit(xmes, dx, ymes, dy, model, p0=None, max_iter=20, thr=5, tail=3, tol=0.5, v=False):
@@ -363,6 +385,11 @@ def outlier(xmes, dx, ymes, dy, model, pars, thr=5, out=False):
     
     return xmes[isin], dx[isin], ymes[isin], dy[isin]
 
+def medianout(data, margin=2.):
+    devs = np.abs(data - np.median(data))
+    normdevs = devs/np.median(devs)
+    return data[normdevs < margin]
+    
 def coope(coords, weights=None):
     npts = len(coords[0]); coords = np.asarray(coords)
     if weights is not None and len(weights) != npts: raise Exception

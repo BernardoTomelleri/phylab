@@ -28,7 +28,7 @@ with similar problems.
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
    (weighted [Coope] method) and an algebraic ellipse fit.
-  - Plotting the 3d <img src="svgs/56935bc0db34a917432af2b1030714ab.svg?invert_in_darkmode" align=middle width=68.59868565pt height=26.76175259999998pt/> surface for the coordinates of the circle or the ellipse.
+  - Plotting the <img src="svgs/56935bc0db34a917432af2b1030714ab.svg?invert_in_darkmode" align=middle width=68.59868565pt height=26.76175259999998pt/> surface for the coordinates of the circle or the ellipse.
 - Folder containing data that can be used in the demo(s).
 
 For further examples of where this module can come in handy feel free to check
@@ -40,11 +40,12 @@ on real sampled signals or internally generated ones.
 A few definitions of the model functions more commonly encountered in the first
 years of Physics lab (e.g. [dampened oscillator], [square wave])
 along with a few digital filters (e.g. [Butterworth]).
-Right at the beginning so you can immediately start adding the models you need.
+Right at the beginning of the module so you can immediately start adding
+the models you need.
 
 ### testing and printing of fit results
 Goodness of fit tests, evaluation of parameter uncertainties and
-correlations  ([chi-square test], [errcor])
+correlations  ([chi-square test], [errcor]).
 Simple print formatters that allow you to quickly display the results
 of a fit and associated uncertainties with the desired number of significant
 digits. ([print correlations], [print parameters])
@@ -56,10 +57,9 @@ Weighted orthogonal distance regression thanks to [ODRPACK].
 Weighted algebraic fits (like [ellipse fit] and others).
 
 ### Fourier transform utilities
-Functions for computing real and complex signal FFTs and other
-quantities necessary for the calculation ([FFT], [sampling]),
-applying window functions, and displaying their output through [Matplotlib]
-([plotfft]).
+Functions for computing FFTs of real and complex signals and other
+associated quantities ([FFT], [sampling], [FWHM]), applying window functions
+and displaying their output through [Matplotlib] ([plotfft]).
 
 ### data plotting
 Instead of having to write multiple calls to function in order to:
