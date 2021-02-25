@@ -75,6 +75,12 @@ Load a selected range of data from (.txt, .csv, .py, etc.) files as [Numpy]
 arrays, loop over files in a directory with a few calls to function.
 ([measured range], [file loop])
 
+For an example of just how much of a difference using these few functions can
+make compare [beat](/examples/beat.py) and [naive_beat](/examples/naive_beat.py):
+these two scripts do the same thing, but the first one is three times shorter
+at 50 lines, runs ~ 0.2 seconds (30%) faster using less memory and can be
+effortlessly extended to work with more than 2 datasets.
+
 ## Development
 Any and all suggestions are always appreciated, If you want to contribute
 in any way don't hesitate to contact me. I'm always happy to learn something

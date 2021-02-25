@@ -4,16 +4,19 @@ Created on Sat Apr 11 23:19:50 2020
 
 @author: berni
 """
+# Standard library imports
 import os
 import glob
+from inspect import getfullargspec
+from collections import namedtuple
+
+# Scientific library imports
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import cm
 from scipy.optimize import curve_fit
 from scipy.odr import odrpack
 from scipy import signal as sg
-from inspect import getfullargspec
-from collections import namedtuple
+from matplotlib import pyplot as plt
+from matplotlib import cm
 
 # Standard argument order for periodical functions:
 # A: Amplitude, frq: frequency, phs: phase, ofs: DC offset, tau: damp time
@@ -192,7 +195,7 @@ def RMSE(seq, exp=None):
 
 def abs_devs(seq, around=None):
     """ Evaluates absolute deviations around a central value or expected data sequence."""
-    if around: return np.abs(seq - around)
+    if around is not None: return np.abs(seq - around)
     return np.abs(seq - np.median(seq))
 
 def FWHM(x, y, FT=None):
@@ -221,7 +224,6 @@ def ldec(seq, upb=None):
     if all(bol.all() == True for bol in check): return True
     return False
     
-                                                  
 # LEAST SQUARE FITTING ROUTINES
 # Scipy.curve_fit with horizontal error propagation 
 def propfit(xmes, dx, ymes, dy, model, p0=None, max_iter=20, thr=5, tail=3, tol=0.5, v=False):
@@ -294,7 +296,7 @@ def propfit(xmes, dx, ymes, dy, model, p0=None, max_iter=20, thr=5, tail=3, tol=
             break
     if v and not(neg or con): print('No condition met, number of calls to',
                                  f'function has reached max_iter = {max_iter}.')
-    return deff, popt, pcov
+    return popt, pcov, deff
 
 # Scipy.odrpack orthogonal distance regressione 
 def ODRfit(xmes, dx, ymes, dy, model, p0=None):
@@ -337,7 +339,7 @@ def ODRfit(xmes, dx, ymes, dy, model, p0=None):
 def outlier(xmes, dx, ymes, dy, model, pars, thr=5, out=False):
     """ Removes outliers from measured data. A sampled point is considered an
     outlier if it has absolute deviation y - model(x, *pars) > thr*dy. """
-    isin = [np.abs(y - model(x, *pars)) < thr*sigma
+    isin = [abs_devs(y, around=model(x, *pars)) < thr*sigma
             for x, y, sigma in zip(xmes, ymes, dy)]
     if out:
         isout = np.invert(isin)
@@ -347,6 +349,8 @@ def outlier(xmes, dx, ymes, dy, model, pars, thr=5, out=False):
     return xmes[isin], dx[isin], ymes[isin], dy[isin]
 
 def medianout(data, thr=2.):
+    """ Filters outliers based on median absolute deviation (MAD) around the
+    median of measured data. """
     devs = abs_devs(data)
     n_sigmas = devs/np.median(devs)
     return data[n_sigmas < thr]
@@ -418,9 +422,10 @@ def Ell_imp2std(A, B, C, D, E, F):
 
 def Ell_std2imp(Xc, Yc, a, b, angle):
     if b > a: a, b = b, a
-    A = a**2 *np.sin(angle)**2 + b**2 * np.cos(angle)**2  
-    B = 2*(b - a)**2 *np.sin(angle)*np.sin(angle)
-    C = a**2 *np.cos(angle)**2 + b**2 * np.sin(angle)**2
+    sin = np.sin(angle); cos = np.cos(angle)
+    A = a**2 * sin**2 + b**2 * cos**2  
+    B = 2*(b**2 - a**2) * sin*cos
+    C = a**2 * cos**2 + b**2 * sin**2
     D = -(2*A*Xc + B*Yc)
     E = -(B*Xc + 2*C*Yc)
     F = A*Xc**2 + B*Xc*Yc + C*Yc**2 - (a*b)**2
@@ -481,8 +486,8 @@ def pltfitres(xmes, dx, ymes, dy=None, model=None, pars=None, out=None):
     #     })
     fig, (ax1, ax2) = plt.subplots(2,1, sharex=True, gridspec_kw={
     'wspace':0.05, 'hspace':0.05, 'height_ratios': [3, 1]})
-    space = np.linspace(np.min(0.9*xmes), np.max(1.1*xmes), 5000)
-    if out  is not None: space = np.linspace(np.min(0.9*out), np.max(1.1*out), 5000)
+    space = np.linspace(np.min(0.9*xmes), np.max(1.1*xmes), 2000)
+    if out is not None: space = np.linspace(np.min(0.9*out), np.max(1.1*out), 2000)
     chisq, ndof, resn = chitest(ymes, dy, model(xmes, *pars), ddof=len(pars))
     ax1 = grid(ax1)
     ax1.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.5, elinewidth=1., capsize=1.5,
@@ -490,7 +495,7 @@ def pltfitres(xmes, dx, ymes, dy=None, model=None, pars=None, out=None):
     ax1.plot(space, model(space, *pars), c='gray', 
              label='fit$\chi^2 = %.1f/%d$' %(chisq, ndof))
     
-    ax2 = grid(ax2)
+    ax2 = grid(ax2, ylab='residuals')
     ax2.errorbar(xmes, resn, None , None, 'ko', elinewidth=0.5, capsize=1.,
              ms=1., ls='--', zorder=5)
     ax2.axhline(0, c='r', alpha=0.7, zorder=10)
@@ -611,6 +616,12 @@ def std_unc(measure, ADC=None):
     unc = np.diff(V)/2/np.sqrt(12)
     return np.append(unc, np.mean(unc))
 
+def interleave(a, b, inv=False):
+    """ Join two sequences a & b by alternating their elements. """
+    merged = [None]*(len(a)+len(b))
+    merged[0::2] = a; merged[1::2] = b
+    return np.array(merged)
+    
 def floop(path=None, usecols=None, v=False):
     """ Allows looping over files of measurements (of a constant value). """
     if path is None: path = os.getcwd() + '/data'
