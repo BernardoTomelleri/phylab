@@ -24,12 +24,12 @@ with similar problems.
 
 ## Contents
 - The main module containing all the functions [lab](/lab.py).
-- A simple showcase of a couple of things this library allows you to do. [circfit](/circfit.py)
+- A simple showcase of a couple of things this library allows you to do [circfit](/circfit.py).
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
    (weighted [Coope] method) and an algebraic ellipse fit.
   - Plotting the $\chi^2(a, b)$ surface for a pair of parameters $a, b$ of the circle or the ellipse.
-- Folder containing data that can be used in the demo(s).
+- Folder containing further examples and data that can be used in the demo(s) [examples](/examples).
 
 For further examples of where this module can come in handy feel free to check
 out [FFT] and [Lock-in detector]. A small paper (in italiano) on fitting,
@@ -76,10 +76,11 @@ arrays, loop over files in a directory with a few calls to function.
 ([measured range], [file loop])
 
 For an example of just how much of a difference using these few functions can
-make compare [beat](/examples/beat.py) and [naive_beat](/examples/naive_beat.py):
-these two scripts do the same thing, but the first one is three times shorter
+have compare [beat](/examples/beat.py) and [beat_naive](/examples/beat_naive.py).
+These two scripts do the same thing, but the first one is three times shorter
 at 50 lines, runs ~ 0.2 seconds (30%) faster using less memory and can be
-effortlessly extended to work with more than 2 datasets.
+easily extended to work with more than 2 datasets, remove outliers,
+compute FFT and so on...
 
 ## Development
 Any and all suggestions are always appreciated, If you want to contribute
