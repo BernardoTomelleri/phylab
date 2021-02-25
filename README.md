@@ -23,15 +23,15 @@ release it for any and all students that may find it helpful for dealing
 with similar problems.
 
 ## Contents
-- The main module containing all the functions [lab](/lab.py).
-- A simple showcase of a couple of things this library allows you to do [circfit](/circfit.py).
+- The main module containing all the functions. [lab](/phylab.py)
+- A simple showcase of a couple of things this library allows you to do. [circfit](/circfit.py)
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
    (weighted [Coope] method) and an algebraic ellipse fit.
   - Plotting the <img src="svgs/0fb48cfe3fc8c14f5b77eba3ba39a718.svg?invert_in_darkmode" align=middle width=53.495080649999984pt height=26.76175259999998pt/> surface for a pair of parameters <img src="svgs/5f8c6707c3c404791835c4d82736cf4f.svg?invert_in_darkmode" align=middle width=23.04983339999999pt height=22.831056599999986pt/> of the circle or the ellipse.
-- Folder containing further examples and data that can be used in the demo(s) [examples](/examples).
+- Folder containing further examples and data that can be used in the demos. [examples](/examples)
 
-For further examples of where this module can come in handy feel free to check
+For another example of where this module can come in handy feel free to check
 out [FFT] and [Lock-in detector]. A small paper (in italiano) on fitting,
 computing Fourier transforms and/or simulating the effect of a Lock-in detector
 on real sampled signals or internally generated ones.
@@ -72,8 +72,8 @@ do all of the above in a faster and less error-prone way.
 
 ### importing data from files
 Load a selected range of data from (.txt, .csv, .py, etc.) files as [Numpy]
-arrays, loop over files in a directory with a few calls to function.
-([measured range], [file loop])
+arrays, loop over files in a directory with a few calls to function
+([measured range], [file loop]).
 
 For an example of just how much of a difference using these few functions can
 have compare [beat](/examples/beat.py) and [beat_naive](/examples/beat_naive.py).
@@ -116,6 +116,7 @@ See - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-synt
    [ellipse fit]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L380>
    [FFT]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L431>
    [sampling]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L512>
+   [FWHM]: <https://github.com/BernardoTomelleri/phylab/blob/b03e131d2007a1ebe2d100dcd2d2d0f3de764fe3/phylab.py#L201>
    [plotfft]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L468>
    [grid]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L206>
    [plot fit &  residuals]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L405>
