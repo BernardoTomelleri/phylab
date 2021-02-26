@@ -1,4 +1,7 @@
-# Phy lab
+![phylab_logo](/svgs/logo.svg)
+
+Phy lab
+=======
 A Python module for basic data analysis and curve fitting for Physics laboratory students.
 
 ## Philosophy behind this
@@ -75,12 +78,20 @@ Load a selected range of data from (.txt, .csv, .py, etc.) files as [Numpy]
 arrays, loop over files in a directory with a few calls to function
 ([measured range], [file loop]).
 
-For an example of just how much of a difference using these few functions can
-have compare [beat](/examples/beat.py) and [beat_naive](/examples/beat_naive.py).
+## Installation
+This library was written entirely in Python 3.x, but because of its entry
+level design should be effortless to readapt to Python 2.x.
+Should be completely OS independent, just download the main module
+and import it in your script.
+
+## Using Phy lab
+For a quick guide on how to use this library and to show just how much of a difference
+using these few functions can have, compare [beat](/examples/beat.py) and
+[beat_naive](/examples/beat_naive.py).
 These two scripts do the same thing, but the first one is three times shorter
 at 50 lines, runs ~ 0.2 seconds (30%) faster using less memory and can be
 easily extended to work with more than 2 datasets, remove outliers,
-compute FFT and so on...
+compute FFT and so on... As you can see for example in [beat_ext](/beat_ext.py).
 
 ## Development
 Any and all suggestions are always appreciated, If you want to contribute
@@ -88,12 +99,6 @@ in any way don't hesitate to contact me. I'm always happy to learn something
 new, so if you know how to improve any part of the code, find something
 that needs fixing or even if you'd like to see something added going forwards,
 feel free to let me know.
-
-## Installation
-This library was written entirely in Python 3.x, but because of its entry
-level design should be effortless to readapt to Python 2.x.
-Should be completely OS independent, just download the main module
-and import it in your script.
 
 ## License
 Phy lab is licensed under the GNU General Public License v3.0 or later.

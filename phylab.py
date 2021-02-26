@@ -433,11 +433,15 @@ def Ell_std2imp(Xc, Yc, a, b, angle):
 
 # UTILITIES FOR MANAGING FIGURE AXES AND OUTPUT GRAPHS
 def grid(ax, xlab = None, ylab = None):
-    """ Adds standard grid and labels for measured data plots to ax. """
+    """ Adds standard grid and labels for measured data plots to ax.
+    Notice: omitting labels results in default x/y [arb. un.]. To leave a
+    label intentionally blank x/y lab must be set to False. """
     ax.grid(color = 'gray', ls = '--', alpha=0.7)
-    ax.set_xlabel('%s' %(xlab if xlab else 'x [a.u.]'), 
-                  x=0.9 - len(xlab)/500 if xlab else 0.9)
-    ax.set_ylabel('%s' %(ylab if ylab else 'y [a.u.]'))
+    if xlab is not False:
+        ax.set_xlabel('%s' %(xlab if xlab else 'x [arb. un.]'),
+                      x=0.9 - len(xlab)/500 if xlab else 0.9)
+    if ylab is not False:
+        ax.set_ylabel('%s' %(ylab if ylab else 'y [arb. un.]' ))
     ax.minorticks_on()
     ax.tick_params(direction='in', length=4, width=1., top=True, right=True)
     ax.tick_params(which='minor', direction='in', width=1., top=True, right=True)
@@ -486,16 +490,16 @@ def pltfitres(xmes, dx, ymes, dy=None, model=None, pars=None, out=None):
     #     })
     fig, (ax1, ax2) = plt.subplots(2,1, sharex=True, gridspec_kw={
     'wspace':0.05, 'hspace':0.05, 'height_ratios': [3, 1]})
-    space = np.linspace(np.min(0.9*xmes), np.max(1.1*xmes), 2000)
-    if out is not None: space = np.linspace(np.min(0.9*out), np.max(1.1*out), 2000)
+    space = np.linspace(np.min(0.9*xmes), np.max(1.05*xmes), 2000)
+    if out is not None: space = np.linspace(np.min(0.9*out), np.max(1.05*out), 2000)
     chisq, ndof, resn = chitest(ymes, dy, model(xmes, *pars), ddof=len(pars))
-    ax1 = grid(ax1)
+    ax1 = grid(ax1, xlab = False, ylab = False)
     ax1.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.5, elinewidth=1., capsize=1.5,
              ls='', label='data')
     ax1.plot(space, model(space, *pars), c='gray', 
              label='fit$\chi^2 = %.1f/%d$' %(chisq, ndof))
     
-    ax2 = grid(ax2, ylab='residuals')
+    ax2 = grid(ax2, xlab = False, ylab = 'residuals')
     ax2.errorbar(xmes, resn, None , None, 'ko', elinewidth=0.5, capsize=1.,
              ms=1., ls='--', zorder=5)
     ax2.axhline(0, c='r', alpha=0.7, zorder=10)
@@ -522,16 +526,16 @@ def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=F
                                        gridspec_kw={'wspace':0.05, 'hspace':0.05})
     else: fig, (ax2, ax1) = plt.subplots(2, 1,
                                          gridspec_kw={'wspace':0.25, 'hspace':0.25}) 
-    ax1 = grid(ax1, xlab = 'Frequency $f$ [Hz]')
+    ax1 = grid(ax1, xlab = 'Frequency $f$ [Hz]', ylab = False)
     ax1.plot(freq, fft, c='k', lw='0.9')
     ax1.set_ylabel('$\widetilde{V}(f)$ Magnitude [%s]' %('dB' if dB else 'arb. un.'))
     if re_im: ax1.set_ylabel('Fourier Transform [Re]')    
 
-    ax2 = grid(ax2, 'Time $t$ [s]', '$V(t)$ [arb. un.]')
+    ax2 = grid(ax2, xlab = 'Time $t$ [s]', ylab = '$V(t)$ [arb. un.]')
     if mod_ph or re_im: 
         fft = tran.imag if re_im else np.angle(tran)
         ax2.plot(freq, fft, c='k', lw='0.9')
-        ax2.set_xlabel('Frequency $f$ [Hz]'); 
+        ax2.set_xlabel('Frequency $f$ [Hz]'); ax1.set_xlabel(None) 
         ax2.set_ylabel('$\widetilde{V}(f)$ Phase [rad]')
         if re_im: ax2.set_ylabel('Fourier Transform [Im]')    
     else:
