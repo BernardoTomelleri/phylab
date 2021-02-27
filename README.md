@@ -26,7 +26,7 @@ release it for any and all students that may find it helpful for dealing
 with similar problems.
 
 ## Contents
-- The main module containing all the functions. [phylab](/phylab/lab.py)
+- The main module containing all the functions. [lab](/phylab/lab.py)
 - A simple showcase of a couple of things this library allows you to do. [circfit](/phylab/circfit.py)
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
@@ -81,8 +81,21 @@ arrays, loop over files in a directory with a few calls to function
 ## Installation
 This library was written entirely in Python 3.x, but because of its entry
 level design should be effortless to readapt to Python 2.x.
-Should be completely OS independent, just download the main module
-and import it in your script.
+Should be completely OS independent.
+The cleanest/easiest way to install and manage phylab is using `pip`:
+```
+pip install --index-url https://test.pypi.org/simple/ --no-deps phylab
+```
+Then simply import the main module with
+```
+from phylab import lab
+```
+
+Alternatively you can clone the repository and import the main module directly from
+within your script by calling
+```
+import phylab as lab
+```
 
 ## Using Phy lab
 For a quick guide on how to use this library and to show just how much of a difference

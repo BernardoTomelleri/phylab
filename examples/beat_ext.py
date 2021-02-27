@@ -4,15 +4,13 @@ Created on Thu Feb 25 17:43:34 2021
 
 @author: berni
 """
-#from phylab import (np, plt, grid, propfit, errcor, prnpar, chitest, pltfitres)
-#import phylab as lab
+from phylab.lab import (np, plt, grid, propfit, errcor, prnpar, chitest, pltfitres)
 from phylab import lab
-from lab import (np, plt, grid, propfit, errcor, prnpar, chitest, pltfitres)
 
 ''' Variables that control the script '''
 tix = False # manually choose spacing between axis ticks
 tex = False # LaTeX typesetting maths and descriptions
-out = True # re-fit the data after removing outliers
+out = False # re-fit the data after removing outliers
 fft = True # Compute and display fft of data array
 chi = True # Plot the chi square landscape for two parameters
 
@@ -87,8 +85,8 @@ for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
             lab.tick(ax1, xmaj=0.5, ymaj=20)
         
     if chi:  
-        a_range = np.linspace(pars[1] - 3e3*perr[1], pars[1] + 3e3*perr[1], 200)
-        b_range = np.linspace(pars[2] - 3e3*perr[2], pars[2] + 3e3*perr[2], 200)
+        a_range = np.linspace(pars[1] - 3e3*perr[1], pars[1] + 3e3*perr[1], 100)
+        b_range = np.linspace(pars[2] - 3e3*perr[2], pars[2] + 3e3*perr[2], 100)
         chi_ab = lab.chisq(x=time, y=pos, model=beat, alpha=a_range, beta=b_range,
                            varnames = ['frq_d', 'frq_m'], pars=pars, dy=dx)
         
