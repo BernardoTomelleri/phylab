@@ -1,0 +1,4 @@
+# Dependencies of the package
+numpy
+scipy
+matplotlib

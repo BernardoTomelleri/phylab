@@ -618,7 +618,12 @@ def mesrange(x, dx, y, dy, x_min=0, x_max=1e9):
     sx = srange(x, x, x_min, x_max); sdx = srange(dx, x, x_min, x_max)
     sy = srange(y, x, x_min, x_max); sdy = srange(dy, x, x_min, x_max)
     return sx, sdx, sy, sdy
-    
+
+def uncert(cval, gain=0, read=0):
+    """ Associates uncertainty of measurement to a central value, assuming
+    gain/scale and reading error are independent. """
+    return np.sqrt((cval*gain)**2 + read**2)
+
 def std_unc(measure, ADC=None):
     """ Associates default uncertainty to measured data array."""
     V = np.asarray(measure)

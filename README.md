@@ -26,8 +26,8 @@ release it for any and all students that may find it helpful for dealing
 with similar problems.
 
 ## Contents
-- The main module containing all the functions. [lab](/phylab.py)
-- A simple showcase of a couple of things this library allows you to do. [circfit](/circfit.py)
+- The main module containing all the functions. [phylab](/phylab/phylab.py)
+- A simple showcase of a couple of things this library allows you to do. [circfit](/phylab/circfit.py)
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
    (weighted [Coope] method) and an algebraic ellipse fit.
@@ -91,7 +91,7 @@ using these few functions can have, compare [beat](/examples/beat.py) and
 These two scripts do the same thing, but the first one is three times shorter
 at 50 lines, runs ~ 0.2 seconds (30%) faster using less memory and can be
 easily extended to work with more than 2 datasets, remove outliers,
-compute FFT and so on... As you can see for example in [beat_ext](/beat_ext.py).
+compute FFT and so on... As you can see for example in [beat_ext](/phylab/beat_ext.py).
 
 ## Development
 Any and all suggestions are always appreciated, If you want to contribute
