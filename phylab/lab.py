@@ -226,9 +226,9 @@ def ldec(seq, upb=None):
 
 def est_tau(signal, time):
     """ Attempts to find rough estimate of signal's damping time tau. """
-  idx = np.argmin(np.abs(signal - np.max(signal)/np.e))
-  tau = time[idx] - time[np.argmax(signal)]
-  return tau
+    idx = np.argmin(np.abs(signal - np.max(signal)/np.e))
+    tau = time[idx] - time[np.argmax(signal)]
+    return tau
 
 # LEAST SQUARE FITTING ROUTINES
 # Scipy.curve_fit with horizontal error propagation 

@@ -10,7 +10,9 @@ venv/
 #Installing & Building
 build/
 dist/
+*.toml
+phylab.egg-info/
 
 # Latex typesetting in README.md
 readtex.md
-
+readpypi.md

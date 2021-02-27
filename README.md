@@ -2,7 +2,7 @@
 
 Phy lab
 =======
-A Python module for basic data analysis and curve fitting for Physics laboratory students.
+A Python package for basic data analysis and curve fitting for Physics laboratory students.
 
 ## Philosophy behind this
 Because this was written by someone starting to learn about experimental Physics
@@ -26,7 +26,7 @@ release it for any and all students that may find it helpful for dealing
 with similar problems.
 
 ## Contents
-- The main module containing all the functions. [phylab](/phylab/phylab.py)
+- The main module containing all the functions. [phylab](/phylab/lab.py)
 - A simple showcase of a couple of things this library allows you to do. [circfit](/phylab/circfit.py)
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
@@ -34,7 +34,7 @@ with similar problems.
   - Plotting the <img src="svgs/0fb48cfe3fc8c14f5b77eba3ba39a718.svg?invert_in_darkmode" align=middle width=53.495080649999984pt height=26.76175259999998pt/> surface for a pair of parameters <img src="svgs/5f8c6707c3c404791835c4d82736cf4f.svg?invert_in_darkmode" align=middle width=23.04983339999999pt height=22.831056599999986pt/> of the circle or the ellipse.
 - Folder containing further examples and data that can be used in the demos. [examples](/examples)
 
-For another example of where this module can come in handy feel free to check
+For another example of where this package can come in handy feel free to check
 out [FFT] and [Lock-in detector]. A small paper (in italiano) on fitting,
 computing Fourier transforms and/or simulating the effect of a Lock-in detector
 on real sampled signals or internally generated ones.
@@ -98,7 +98,7 @@ Any and all suggestions are always appreciated, If you want to contribute
 in any way don't hesitate to contact me. I'm always happy to learn something
 new, so if you know how to improve any part of the code, find something
 that needs fixing or even if you'd like to see something added going forwards,
-feel free to let me know.
+feel free to let me know (here or at bernardo.tomelleri@gmail.com).
 
 ## License
 Phy lab is licensed under the GNU General Public License v3.0 or later.
