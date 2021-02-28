@@ -224,12 +224,6 @@ def ldec(seq, upb=None):
     if all(bol.all() == True for bol in check): return True
     return False
 
-def est_tau(signal, time):
-    """ Attempts to find rough estimate of signal's damping time tau. """
-    idx = np.argmin(np.abs(signal - np.max(signal)/np.e))
-    tau = time[idx] - time[np.argmax(signal)]
-    return tau
-
 # LEAST SQUARE FITTING ROUTINES
 # Scipy.curve_fit with horizontal error propagation 
 def propfit(xmes, dx, ymes, dy, model, p0=None, max_iter=20, thr=5, tail=3, tol=0.5, v=False):
