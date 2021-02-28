@@ -96,7 +96,7 @@ from phylab import lab
 ```
 
 Alternatively you can clone the repository or download the latest release
-manually and import the main module directly from within your script by calling
+manually and import the main module directly inside your script by calling
 ```
 import phylab as lab
 ```
