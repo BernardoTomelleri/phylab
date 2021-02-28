@@ -5,7 +5,7 @@ name: Build and Deploy to PyPI
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   test:
@@ -52,9 +52,9 @@ jobs:
     - name: Test build with twine
       run: |
         twine check dist/*    
-    - name: Publish
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        twine upload dist/*
+    - name: Publish package
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    uses: pypa/gh-action-pypi-publish@release/v1
+    with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
