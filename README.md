@@ -66,7 +66,7 @@ Weighted algebraic fits (like [ellipse fit] and others).
 ### Fourier transform utilities
 Functions for computing FFTs of real and complex signals and other
 associated quantities ([FFT], [sampling], [FWHM]), applying window functions
-and displaying their output through [Matplotlib] ([plotfft]).
+and displaying their output through Matplotlib ([plotfft]).
 
 ### data plotting
 Instead of having to write multiple calls to function in order to:
@@ -78,7 +78,7 @@ do all of the above in a faster and less error-prone way.
 ([grid], [plot fit &  residuals])
 
 ### importing data from files
-Load a selected range of data from (.txt, .csv, .py, etc.) files as [Numpy]
+Load a selected range of data from (.txt, .csv, .py, etc.) files as NumPy
 arrays, loop over files in a directory with a few calls to function
 ([measured range], [file loop]).
 
@@ -86,9 +86,18 @@ arrays, loop over files in a directory with a few calls to function
 This library was written entirely in Python 3.x, but because of its entry
 level design should be effortless to readapt to Python 2.x.
 Should be completely OS independent.
-The cleanest/easiest way to install and manage phylab is using `pip`:
+
+### Prerequisites
+Phy lab requires three core packages from the SciPy ecosystem to work:
+[Numpy], [SciPy] and [Matplotlib]. You should be able to obtain all 3 via `pip`
 ```
-pip install phylab
+python -m pip install --user --upgrade numpy scipy matplotlib
+```
+Check [SciPy's installation page](https://www.scipy.org/install.html) for more information.
+
+The cleanest way to install and manage phylab is using `pip`:
+```
+python -m pip install --user phylab
 ```
 Then simply import the main module with
 ```
@@ -141,7 +150,7 @@ See - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-synt
    [plot fit &  residuals]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L405>
    [measured range]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L506>
    [file loop]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L533>
-   [SciPy]: <https://www.scipy.org/>   
+   [SciPy]: <https://www.scipy.org/scipylib/index.html>   
    [NumPy]: <https://numpy.org/>
    [Matplotlib]: <https://matplotlib.org/stable/index.html>
    [ODRPACK]: <https://docs.scipy.org/doc/external/odrpack_guide.pdf>
