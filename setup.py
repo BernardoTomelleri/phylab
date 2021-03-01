@@ -7,6 +7,7 @@ Created on Sat Feb 27 12:29:11 2021
 from setuptools import setup, find_packages
 from io import open
 from os import path
+import glob
 import pathlib
 
 from phylab import (__pkgname__ as PKG_NAME, __version__ as VERSION,
@@ -20,6 +21,10 @@ PROJ_DIR = pathlib.Path(__file__).parent
 with open(path.join(PROJ_DIR, 'requirements.txt'), encoding='utf-8') as f:
     all_reqs = f.read().split('\n')
 REQUIREMENTS = [x.strip() for x in all_reqs]
+
+# Load all python files in /examples dir as scripts
+exmods = glob.glob(path.join(path.dirname(__file__), "examples/*.py"))
+EXAMPLES = ['examples/' + path.basename(f) for f in exmods if path.isfile(f) and not f.endswith('__init__.py')]
 
 # The text of the README file
 README = (PROJ_DIR/'readpypi.md').read_text()
@@ -44,12 +49,7 @@ setup(
     ],
     license = LICENSE,
     packages = find_packages(),
-    scripts=[
-        'examples/beat.py',
-        'examples/beat_naive.py',
-        'examples/beat_ext.py',
-        'examples/circfit.py'
-    ],
+    scripts = EXAMPLES,
     python_requires = '>=3.6',
     install_requires = REQUIREMENTS
 )

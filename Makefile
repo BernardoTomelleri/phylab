@@ -8,7 +8,7 @@ all: prereqs build check
 
 prereqs:
 	python3 -m pip install --upgrade pip
-	python3 -m pip install --user --upgrade setuptools wheels twine
+	python3 -m pip install --user --upgrade setuptools wheels twine scipy numpy matplotlib
 
 build: prereqs
 	python3 -m setup.py sdist bdist_wheel 
