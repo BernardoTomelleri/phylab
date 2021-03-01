@@ -4,8 +4,8 @@ Created on Wed Feb 24 19:57:02 2021
 
 @author: berni
 """
-from phylab.lab import (np, plt, grid, propfit, errcor, prnpar, chitest, pltfitres)
-from phylab import lab
+from phylab import (np, plt, grid, propfit, errcor, prnpar, chitest, pltfitres)
+import phylab as lab
 
 ''' Variables that control the script '''
 tix = True # manually choose spacing between axis ticks

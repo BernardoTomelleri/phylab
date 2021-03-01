@@ -92,14 +92,11 @@ pip install phylab
 ```
 Then simply import the main module with
 ```
-from phylab import lab
-```
-
-Alternatively you can clone the repository or download the latest release
-manually and import the main module directly inside your script by calling
-```
 import phylab as lab
 ```
+
+Alternatively, you can clone the repository or download the latest release
+manually and import the main module directly inside your script just like before.
 
 ## Using Phy lab
 For a quick guide on how to use this library and to show just how much of a difference

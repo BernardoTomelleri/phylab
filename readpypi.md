@@ -1,5 +1,8 @@
 Phy lab
 ========
+[![Build Status](https://github.com/BernardoTomelleri/phylab/actions//workflows/PyPI-publish-release.yml/badge.svg)](https://github.com/BernardoTomelleri/phylab/actions/workflows/PyPI-publish-release.yml)
+[![GPLv3 License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/gpl-3.0.html)
+
 A Python package for basic data analysis and curve fitting for Physics laboratory students.
 
 ## Philosophy behind this
@@ -86,14 +89,11 @@ pip install phylab
 ```
 Then simply import the main module with
 ```
-from phylab import lab
-```
-
-Alternatively you can clone the repository or download the latest release
-manually and import the main module directly inside your script by calling
-```
 import phylab as lab
 ```
+
+Alternatively, you can clone the repository or download the latest release
+manually and import the main module directly inside your script just like before.
 
 ## Using Phy lab
 For a quick guide on how to use this library and to show just how much of a difference

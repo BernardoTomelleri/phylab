@@ -4,8 +4,8 @@ Created on Sun Feb 28 13:08:04 2021
 
 @author: berni
 """
-from phylab.lab import (np, plt, grid, errcor, prnpar, chitest)
-from phylab import lab
+from phylab import (np, plt, grid, errcor, prnpar, chitest)
+import phylab as lab
 
 ''' Variables that control the script '''
 tex = False # LaTeX typesetting maths and descriptions

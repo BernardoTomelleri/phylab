@@ -4,8 +4,8 @@ Created on Fri Feb 19 16:48:23 2021
 
 @author: berni
 """
-from phylab.lab import (np, plt, grid, std_unc, prnpar, errcor, Ell_coords)
-from phylab import lab
+from phylab import (np, plt, grid, std_unc, prnpar, errcor, Ell_coords)
+import phylab as lab
 
 ''' Variables that control the script '''
 gen = False # generate measured points around circumference
