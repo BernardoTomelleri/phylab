@@ -18,13 +18,13 @@ from phylab import (__pkgname__ as PKG_NAME, __version__ as VERSION,
 PROJ_DIR = pathlib.Path(__file__).parent
 
 # Get list of package requirements from .txt file
-with open(PROJ_DIR + 'requirements.txt', encoding='utf-8') as f:
+with open(path.join(PROJ_DIR, 'requirements.txt'), encoding='utf-8') as f:
     all_reqs = f.read().split('\n')
 REQUIREMENTS = [x.strip() for x in all_reqs]
 
 # Load all python files in /examples dir as scripts
-exmods = glob.glob(path.dirname(__file__) + 'examples/*.py'))
-EXAMPLES = ['examples/' + path.basename(f) for f in exmods if path.isfile(f) and not f.endswith('__init__.py')]
+exmods = glob.glob(path.join(path.dirname(__file__), 'examples/*.py'))
+EXAMPLES = [path.join('examples/', path.basename(f)) for f in exmods if path.isfile(f) and not f.endswith('__init__.py')]
 
 # The text of the README file
 README = (PROJ_DIR/'readpypi.md').read_text()
