@@ -5,6 +5,25 @@ Phy lab
 
 A Python package for basic data analysis and curve fitting for Physics laboratory students.
 
+## Table of contents
+- [Phy lab](#phy-lab)
+  * [Table of contents](#table-of-contents)
+  * [Philosophy behind this](#philosophy-behind-this)
+    + [How this library came about](#how-this-library-came-about)
+  * [Contents](#contents)
+    + [model functions](#model-functions)
+    + [testing and printing of fit results](#testing-and-printing-of-fit-results)
+    + [curve-fitting routines](#curve-fitting-routines)
+    + [Fourier transform utilities](#fourier-transform-utilities)
+    + [data plotting](#data-plotting)
+    + [importing data from files](#importing-data-from-files)
+  * [Setting up](#setting-up)
+    + [Prerequisites](#prerequisites)
+    + [Installation](#installation)
+  * [Using Phy lab](#using-phy-lab)
+  * [Development](#development)
+  * [License](#license)
+
 ## Philosophy behind this
 Because this was written by someone starting to learn about experimental Physics
 and Python (for students in a similar situation) all the functions in this module
@@ -79,7 +98,7 @@ Load a selected range of data from (.txt, .csv, .py, etc.) files as [Numpy]
 arrays, loop over files in a directory with a few calls to function
 ([measured range], [file loop]).
 
-## Installation
+## Setting up
 This library was written entirely in Python 3.x, but because of its entry
 level design should be effortless to readapt to Python 2.x.
 Should be completely OS independent.
@@ -90,8 +109,9 @@ Phy lab requires three core packages from the SciPy ecosystem to work:
 ```
 python -m pip install --user --upgrade numpy scipy matplotlib
 ```
-Check [SciPy's installation page](https://www.scipy.org/install.html) for more information.
+Check [SciPy's installation page](https://www.scipy.org/install.html) for more details.
 
+### Installation
 The cleanest way to install and manage phylab is using `pip`:
 ```
 python -m pip install --user phylab
