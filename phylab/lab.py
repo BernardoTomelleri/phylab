@@ -349,7 +349,7 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
             print('Optimal parameters:')
             prnpar(popt, perr, model)
             # Chi square test
-            chisq, ndof = chitest(ymes, deff, model(xmes, *popt), ddof=len(popt))[:-1]
+            chisq, ndof = chitest(model(xmes, *popt), ymes, deff, ddof=len(popt))[:-1]
             print(f'Normalized chi square: {chisq/ndof:.2e}')
             # Normalized parameter covariance
             print('Correlation matrix:\n', pcor)
