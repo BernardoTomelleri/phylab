@@ -12,10 +12,10 @@ tex = False # LaTeX typesetting maths and descriptions
 gen = False # generate dampened oscillation data points
 
 def naive_tau(signal, time):
-""" This unfortunately almost never works. Don't use this."""
-  idx = np.argmin(np.abs(signal - np.max(signal)/np.e))
-  tau = time[idx] - time[np.argmax(signal)]
-  return tau
+    """ This unfortunately almost never works. Don't use this."""
+    idx = np.argmin(np.abs(signal - np.max(signal)/np.e))
+    tau = time[idx] - time[np.argmax(signal)]
+    return tau
   
 def est_tau(signal, time, nbins=50):
     """ Attempts to find rough estimate of signal's damping time tau.

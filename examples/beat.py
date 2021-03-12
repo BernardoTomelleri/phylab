@@ -33,14 +33,14 @@ init_a = [np.std(x_a), 1.44, 0.03, 0., 0., np.mean(x_a), 60.]
 init_b = [np.std(x_b), 1.42, 0.02, 0., 0., np.mean(x_b), 60.]
 
 for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
-    pars, covm, deff = propfit(time, dt, pos, dx, model=beat, p0=init)
+    pars, covm, deff = propfit(beat, time, pos, dt, dx, p0=init)
     perr, pcor = errcor(covm)
     prnpar(pars, perr, model=beat)
-    chisq, ndof, resn, sigma = chitest(pos, deff, beat(time, *pars),
+    chisq, ndof, resn, sigma = chitest(beat(time, *pars), pos, unc=deff,
                                          ddof=len(pars), gauss=True, v=True)
 
     # graphs
-    fig, (axf, axr) = pltfitres(time, dt, pos, deff, model=beat, pars=pars)
+    fig, (axf, axr) = pltfitres(beat, time, pos, dt, deff, pars=pars)
     axf.set_ylabel('Position %c [ADC counts]' %('A' if all(time == t_a) else 'B'))
     if tix: lab.tick(axf, xmaj=5, ymaj=50)
     legend = axf.legend(loc='best')

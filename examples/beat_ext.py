@@ -38,14 +38,14 @@ init_a = [np.std(x_a), 1.44, 0.03, 0., 0., np.mean(x_a), 60.]
 init_b = [np.std(x_b), 1.42, 0.02, 0., 0., np.mean(x_b), 60.]
 
 for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
-    pars, covm, deff = propfit(time, dt, pos, dx, model=beat, p0=init)
+    pars, covm, deff = propfit(beat, time, pos, dt, dx, p0=init)
     perr, pcor = errcor(covm)
     prnpar(pars, perr, model=beat)
-    chisq, ndof, resn, sigma = chitest(pos, deff, beat(time, *pars),
+    chisq, ndof, resn, sigma = chitest(beat(time, *pars), pos, unc=deff,
                                          ddof=len(pars), gauss=True, v=True)
 
     # Standard graph with residuals
-    fig, (axf, axr) = pltfitres(time, dt, pos, deff, model=beat, pars=pars)
+    fig, (axf, axr) = pltfitres(beat, time, pos, dt, deff, pars=pars)
     axf.set_ylabel('Position %c [ADC counts]' %('A' if all(time == t_a) else 'B'))
     if tix: lab.tick(axf, xmaj=5, ymaj=50)
     legend = axf.legend(loc='best')
@@ -57,15 +57,15 @@ for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
         timein, dtin, posin, dpin, timeout, dtout, posout, dpout = lab.outlier(
                                 time, dt, pos, dx, beat, pars, thr=4, out=True)
         # propagated fit again without considering outliers
-        pars, covm, deff = propfit(timein, dtin, posin, dpin, model=beat, p0=pars)
+        pars, covm, deff = propfit(beat, timein, posin, dpin, dtin, p0=pars)
         perr, pcor = errcor(covm)
         prnpar(pars, perr, model=beat)
-        chisq, ndof, resn, sigma = chitest(posin, deff, beat(timein, *pars),
+        chisq, ndof, resn, sigma = chitest(beat(timein, *pars), posin, unc=deff,
                                            ddof=len(pars), gauss=True, v=True)
         normout = (posout - beat(timeout, *pars))/dpout
         
         # Graph with outliers
-        figout, (axf, axr) = pltfitres(timein, dtin, posin, deff, model=beat, pars=pars)
+        figout, (axf, axr) = pltfitres(beat, timein, posin, dx=dtin, dy=deff, pars=pars)
         axf.errorbar(timeout, posout, dpout, dtout, 'gx',  ms=3, elinewidth=1.,
                      capsize=1.5, ls='', label='outliers')
         axf.set_ylabel('Position %c [ADC counts]' %('A' if all(time == t_a) else 'B'))
@@ -87,7 +87,7 @@ for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
     if chi:  
         a_range = np.linspace(pars[1] - 3e3*perr[1], pars[1] + 3e3*perr[1], 100)
         b_range = np.linspace(pars[2] - 3e3*perr[2], pars[2] + 3e3*perr[2], 100)
-        chi_ab = lab.chisq(x=time, y=pos, model=beat, alpha=a_range, beta=b_range,
+        chi_ab = lab.chisq(model=beat, x=time, y=pos, alpha=a_range, beta=b_range,
                            varnames = ['frq_d', 'frq_m'], pars=pars, dy=dx)
         
         fig3d, ax3d = lab.plot3d(x=a_range, y=b_range, z=chi_ab, xlab='$f_d$ [Hz]',

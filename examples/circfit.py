@@ -85,7 +85,7 @@ for ax in axs: ax.legend(loc ='best')
 # Plot the Chi square surface for circle's center coordinates
 a_range = np.linspace(pars[0] - 10*perr[0], pars[0] + 10*perr[0], 50)
 b_range = np.linspace(pars[1] - 10*perr[1], pars[1] + 10*perr[1], 50)
-chi_ab = lab.chisq(x=data, y=rsq, model=circ_dist, alpha=a_range, beta=b_range,
+chi_ab = lab.chisq(model=circ_dist, x=data, y=rsq, alpha=a_range, beta=b_range,
                    varnames = ['Xc', 'Yc'], pars=pars, dy=None)
 
 fig3d, ax3d = lab.plot3d(x=a_range, y=b_range, z=chi_ab, xlab='$x_c$', ylab='$y_c$',

@@ -7,6 +7,7 @@ Created on Sat Apr 11 23:19:50 2020
 # Standard library imports
 import os
 import glob
+import datetime
 from inspect import getfullargspec
 from collections import namedtuple
 
@@ -15,8 +16,10 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy.odr import odrpack
 from scipy import signal as sg
+from scipy import special as sp
 from matplotlib import pyplot as plt
 from matplotlib import cm
+from matplotlib import dates
 
 # Standard argument order for periodical functions:
 # A: Amplitude, frq: frequency, phs: phase, ofs: DC offset, tau: damp time
@@ -60,6 +63,31 @@ def coope_circ(coords, Xc=0, Yc=0, Rc=1):
     x, y = coords
     return Xc*x + Yc*y + Rc
 
+def gaussian(x, mean=0, sigma=1):
+    """ Gaussian or normal probability distribution. """
+    return np.exp( - np.square((x - mean)/(sigma))/2.) / sigma*np.sqrt(2*np.pi)
+
+def gaussian_CDF(x, mean=0, sigma=1):
+    """ Gaussian or normal cumulative distribution. """
+    return (1 + sp.erf((x - mean) / (np.sqrt(2)*sigma)))/2.
+
+def lorentzian(x, x0=0, HWHM=1):
+    """ Cauchy - Lorentz - Breit - Wigner probability distribution. """
+    return (HWHM / ((x - x0)**2 + HWHM**2))/np.pi
+
+def lorentzian_CDF(x, x0=0, HWHM=1):
+    """ Cauchy - Lorentz - Breit - Wigner cumulative distribution. """
+    return np.arctan((x - x0) / HWHM)/np.pi + 0.5
+
+def voigt(x, sigma=1, gamma=1):
+    """ Voigt profile / probability density function. """
+    r2sigma = np.sqrt(2)*sigma
+    return np.real(sp.wofz((x + 1j*gamma)/r2sigma)) / r2sigma*np.sqrt(np.pi)
+
+def logistic(t, L=1, k=1, t0=0):
+    """ Logistic function or sigmoid curve. """
+    return L/(1 + np.exp(k*(t0 - t)))
+
 def fder(f, x, pars):
     return np.gradient(f(x, *pars), 1)
 
@@ -100,10 +128,10 @@ def butf(signal, order, fc, ftype='lp', sampf=None):
 # UTILITIES FOR MANAGING PARAMETER ESTIMATES AND TEST RESULTS
 # Some functions share a variable v, verbose mode. Activates various print
 # statements about variables contained inside the function.
-def chitest(data, unc, model, ddof=0, gauss=False, v=False):
+def chitest(prediction, data, unc=1., ddof=0, gauss=False, v=False):
     """ Evaluates Chi-square goodness of fit test for a function, model, to
     a set of data. """
-    resn = (data - model)/unc
+    resn = (data - prediction)/unc
     ndof = len(data) - ddof
     chisq = (resn**2).sum()
     if gauss:
@@ -115,7 +143,7 @@ def chitest(data, unc, model, ddof=0, gauss=False, v=False):
         print('Chi square/ndof = %.1f/%d' % (chisq, ndof))
     return chisq, ndof, resn
 
-def chisq(x, y, model, alpha, beta, varnames, pars=None, dy=None):
+def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
     """
     Chi-square as a function of two model function parameters (alpha, beta),
     while all others are constrained/constant.
@@ -159,6 +187,9 @@ def chisq(x, y, model, alpha, beta, varnames, pars=None, dy=None):
     if dy is None:
         return np.array([[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta])
     return np.array([[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta])
+
+def R_squared(observed, predicted):
+    return 1. - (np.var(observed - predicted)/np.var(observed))
 
 def errcor(covm):
     """ Computes parameter error and correlation matrix from covariance. """
@@ -231,27 +262,49 @@ def ldec(seq, upb=None):
         return True
     return False
 
+def is_symmetric(a, tol=1e-8):
+    "Returns True if array a is symmetric within tolerance tol."
+    return np.all(np.abs(a - a.T) < tol)
+
+def valid_cov(covm):
+    """ Checks whether covm is a valid covariance matrix. That is: finite,
+    symmetric and not zero on its diagonal."""
+    if np.isfinite(covm).all() and covm.diagonal().all() != 0. and is_symmetric(covm):
+        return True
+    return False
+
 # LEAST SQUARE FITTING ROUTINES
 # Scipy.curve_fit with horizontal error propagation
-def propfit(xmes, dx, ymes, dy, model, p0=None, max_iter=20, thr=5, tail=3, tol=0.5, v=False):
+def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
+            max_iter=20, thr=5, tail=3, rtol=0.5, v=False):
     """ Modified non-linear least squares (curve_fit) algorithm to
     fit model to a set of data, accounting for x-axis uncertainty
     using linear error propagation onto y-axis uncertainty.
 
     Parameters
     ----------
+    model : callable
+        The model function to be fitted to the data.
     xmes : array_like
         Central values of the independent variable where the data is measured.
-    dx : array_like
-        Uncertainties associated to xmes.
     ymes : array_like
         Central values of the dependent measured data.
     dy : array_like
         Uncertainties associated to ymes.
-    model : callable
-        The model function to be fitted to the data.
+    dx : array_like
+        Uncertainties associated to xmes.
     p0 : array_like, optional
         Initial guess for the parameters, assumes 1 if p0 is None.
+    alg : {‘trf’, ‘dogbox’, ‘lm’}, optional
+        Algorithm to perform minimization.
+            * 'trf' : Trust Region Reflective algorithm, particularly suitable
+            for large sparse problems with bounds. Generally robust method.
+            * 'dogbox' : dogleg algorithm with rectangular trust regions,
+            typical use case is small problems with bounds. Not recommended
+            for problems with rank-deficient Jacobian.
+            * 'lm' : Levenberg-Marquardt algorithm as implemented in MINPACK.
+            Doesn't handle bounds and sparse Jacobians. Usually the most
+            efficient method for small unconstrained problems. Default is 'lm'.
     max_iter : int, optional
         Arbitrary natural constant, iteration is stopped if neither condition
         is met before max_iter iterations of the fit routine. 20 by default.
@@ -267,27 +320,26 @@ def propfit(xmes, dx, ymes, dy, model, p0=None, max_iter=20, thr=5, tail=3, tol=
 
     Returns
     -------
-    deff : ndarray
-        The propagated uncertainty of ymes after the iterated fit proces,
-        the same dy passed as argument if propagation was not necessary.
     popt : ndarray
         Optimal values for the parameters of model that mimimize chi square
         test, found by fitting with propagated uncertainties.
     pcov : 2darray
         The estimated covariance of popt.
+    deff : ndarray
+        The propagated uncertainty of ymes after the iterated fit proces,
+        the same dy passed as argument if propagation was not necessary.
 
     """
-    deff = np.asarray(dy)
+    deff = dy
     plist = []; elist = []
     for n in range(max_iter):
-        popt, pcov = curve_fit(model, xmes, ymes, p0, deff,
+        popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg,
                                absolute_sigma=False)
         deff = np.sqrt(deff**2 + (dx * fder(model, xmes, popt))**2)
         plist.append(popt); elist.append(errcor(pcov)[0])
         con = ldec(np.abs(np.diff(plist[-tail:], axis=0)),
-                   upb=elist[-tail]*tol) if n >= tail else False
+                   upb=elist[-tail]*rtol) if n >= tail else False
         neg = np.mean(deff) > thr*np.mean(dx * abs(fder(model, xmes, popt)))
-        # print(n, np.mean(deff) - thr*np.mean(dx * abs(fder(model, xmes,popt)))) DEBUG
         if neg or con:
             if v:
                 if neg: print(f'x-err negligibility reached in {n} iterations')
@@ -460,11 +512,11 @@ def Ell_std2imp(Xc, Yc, a, b, angle):
     return np.array([A, B, C, D, E, F])
 
 # UTILITIES FOR MANAGING FIGURE AXES AND OUTPUT GRAPHS
-def grid(ax, xlab=None, ylab=None):
+def grid(ax, which='major', xlab=None, ylab=None):
     """ Adds standard grid and labels for measured data plots to ax.
     Notice: omitting labels results in default x/y [arb. un.]. To leave a
     label intentionally blank x/y lab must be set to False. """
-    ax.grid(color='gray', linestyle='--', alpha=0.7)
+    ax.grid(which=which, color='gray', linestyle='--', alpha=0.7)
     if xlab is not False:
         ax.set_xlabel('%s' % (xlab if xlab else 'x [arb. un.]'),
                       x=0.9 - len(xlab)/500 if xlab else 0.9)
@@ -475,7 +527,7 @@ def grid(ax, xlab=None, ylab=None):
     ax.tick_params(which='minor', direction='in', width=1., top=True, right=True)
     return ax
 
-def tick(ax, xmaj=None, xmin=None, ymaj=None, ymin=None, zmaj=None, zmin=None):
+def tick(ax, xmaj=None, xmin=None, ymaj=None, ymin=None, zmaj=None, zmin=None, date=None):
     """ Adds linearly spaced ticks to ax. """
     if not xmin:
         xmin = xmaj/5. if xmaj else None
@@ -493,6 +545,11 @@ def tick(ax, xmaj=None, xmin=None, ymaj=None, ymin=None, zmaj=None, zmin=None):
         ax.zaxis.set_major_locator(plt.MultipleLocator(zmaj))
     if zmin:
         ax.zaxis.set_minor_locator(plt.MultipleLocator(zmin))
+    if date:
+        locator = dates.AutoDateLocator(minticks=5, maxticks=10)
+        formatter = dates.ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
     return ax
 
 def logx(ax, tix=None):
@@ -516,7 +573,11 @@ def logz(ax, tix=None):
         ax.zaxis.set_major_locator(plt.LogLocator(numticks=tix))
         ax.zaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
                                                   numticks=tix))
-def pltfitres(xmes, dx, ymes, dy=None, model=None, pars=None, out=None):
+
+def days_from_epoch(date):
+    return (date - datetime.datetime(1970, 1, 1)).days
+
+def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, out=None, date=None):
     """ Produces standard plot of best-fit curve describing measured data
     with residuals underneath. """
     # Variables that control the plot
@@ -535,8 +596,12 @@ def pltfitres(xmes, dx, ymes, dy=None, model=None, pars=None, out=None):
     ax1 = grid(ax1, xlab=False, ylab=False)
     ax1.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.5, elinewidth=1., capsize=1.5,
                  ls='', label='data')
-    ax1.plot(space, model(space, *pars), c='gray',
-             label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
+    if date is not None:
+        ax1.plot_date(xmes + days_from_epoch(date) - len(xmes), model(xmes, *pars),
+                      c='gray', label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
+    else:
+        ax1.plot(space, model(space, *pars), c='gray',
+                 label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
 
     ax2 = grid(ax2, xlab=False, ylab='residuals')
     ax2.errorbar(xmes, resn, None, None, 'ko', elinewidth=0.5, capsize=1.,
