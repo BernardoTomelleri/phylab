@@ -396,18 +396,23 @@ def ODRfit(xmes, dx, ymes, dy, model, p0=None):
     print('Chi square/ndof = %.1f/%d' % (out.sum_square, len(ymes)-len(p0)))
     return popt, pcov
 
-def outlier(xmes, dx, ymes, dy, model, pars, thr=5, out=False):
+def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, out=False):
     """ Removes outliers from measured data. A sampled point is considered an
     outlier if it has absolute deviation y - model(x, *pars) > thr*dy. """
-    isin = [abs_devs(y, around=model(x, *pars)) < thr*sigma
+    if dy is None:
+        dy = np.ones_like(ymes)
+    isin = [abs_devs(y, around=model(x, *pars)) < thr * sigma
             for x, y, sigma in zip(xmes, ymes, dy)]
     if out:
         isout = np.invert(isin)
-        return (xmes[isin], dx[isin], ymes[isin], dy[isin],
-                xmes[isout], dx[isout], ymes[isout], dy[isout])
+        if dx is not None:
+            return (xmes[isin], dx[isin], ymes[isin], dy[isin],
+                    xmes[isout], dx[isout], ymes[isout], dy[isout])
+        return xmes[isin], ymes[isin], dy[isin], xmes[isout], ymes[isout], dy[isout]
 
-    return xmes[isin], dx[isin], ymes[isin], dy[isin]
-
+    if dx is not None:
+        return xmes[isin], dx[isin], ymes[isin], dy[isin]
+    return xmes[isin], ymes[isin], dy[isin]
 def medianout(data, thr=2.):
     """ Filters outliers based on median absolute deviation (MAD) around the
     median of measured data. """
