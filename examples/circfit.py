@@ -49,7 +49,7 @@ else: unc = np.zeros_like(sol)
 
 if tex: plt.rc('text', usetex=True); plt.rc('font', family='serif')
 xCop, yCop = Ell_coords(*cen, rad); xfit, yfit = Ell_coords(*pars); xEl, yEl = Ell_coords(*p)
-fig, axs = plt.subplots(1,2, sharex=True); axc = axs[0]; axe = axs[1]
+fig, axs = plt.subplots(1, 2, sharex=True); axc = axs[0]; axe = axs[1]
 for ax in axs:
     grid(ax); ax.axis('equal')
     ax.errorbar(*data, dy, dx, 'ko', ms=1.2, elinewidth=0.8, capsize= 1.1,
@@ -61,7 +61,7 @@ axc.plot(cen[0], cen[1], c='c', marker='.', label='Coope center')
 axc.plot(xfit, yfit, c='y', ls='--', lw=0.8, zorder=10, alpha=0.6, label='circle fit radius')
 axc.errorbar(*pars[:-1], *perr[:-1],'yo', ms=1.5, elinewidth=0.9, capsize= 1.2,
         ls='', label='circle fit center')
-if con: 
+if con:
     axc.plot(*Ell_coords(*pars[:-1], a=pars[-1] + perr[-1]), c='r', ls='--', lw=0.8,
             zorder=10, alpha=0.6, label='circle fit $r + dr$')
     axc.plot(*Ell_coords(*pars[:-1], a=pars[-1] - perr[-1]), c='b', ls='--', lw=0.8,
@@ -71,7 +71,7 @@ if con:
 axe.plot(xEl, yEl, c='m', ls='--', lw=0.8, zorder=10, alpha=0.6, label='best-fit ellipse')
 axe.errorbar(p[0], p[1], unc[1], unc[0], 'mo', ms=1.5, elinewidth=0.9,
             capsize= 1.2, label='ellipse center')
-if gen: 
+if gen:
     axe.plot(*Ell_coords(*init, step=npts), c='pink', ls='-', lw=1,
                 zorder=10, alpha=0.6, label='generated ellipse')
     axe.plot(init[0], init[1], c='pink', marker='.', label='generated center')

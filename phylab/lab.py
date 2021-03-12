@@ -336,7 +336,8 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
         popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg,
                                absolute_sigma=False)
         deff = np.sqrt(deff**2 + (dx * fder(model, xmes, popt))**2)
-        plist.append(popt); elist.append(errcor(pcov)[0])
+        plist.append(popt)
+        elist.append(errcor(pcov)[0])
         con = ldec(np.abs(np.diff(plist[-tail:], axis=0)),
                    upb=elist[-tail]*rtol) if n >= tail else False
         neg = np.mean(deff) > thr*np.mean(dx * abs(fder(model, xmes, popt)))
@@ -359,7 +360,7 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
     return popt, pcov, deff
 
 # Scipy.odrpack orthogonal distance regressione
-def ODRfit(xmes, dx, ymes, dy, model, p0=None):
+def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
     """ Finds best-fit model parameters for a set of data using ODR algorithm
         (model function must be in form f(beta[n], x)).
 
@@ -413,6 +414,7 @@ def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, out=False):
     if dx is not None:
         return xmes[isin], dx[isin], ymes[isin], dy[isin]
     return xmes[isin], ymes[isin], dy[isin]
+
 def medianout(data, thr=2.):
     """ Filters outliers based on median absolute deviation (MAD) around the
     median of measured data. """
@@ -597,7 +599,7 @@ def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, out=None, date=Non
     space = np.linspace(np.min(0.9*xmes), np.max(1.05*xmes), 2000)
     if out is not None:
         space = np.linspace(np.min(0.9*out), np.max(1.05*out), 2000)
-    chisq, ndof, resn = chitest(ymes, dy, model(xmes, *pars), ddof=len(pars))
+    chisq, ndof, resn = chitest(model(xmes, *pars), ymes, dy, ddof=len(pars))
     ax1 = grid(ax1, xlab=False, ylab=False)
     ax1.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.5, elinewidth=1., capsize=1.5,
                  ls='', label='data')
@@ -616,7 +618,8 @@ def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, out=None, date=Non
 
 def plot3d(x, y, z, xlab=None, ylab=None, zlab=None):
     """ Produces standard 3d plot of z as a function of x and y. """
-    X, Y = np.meshgrid(x, y); Z = np.atleast_1d(z)
+    X, Y = np.meshgrid(x, y)
+    Z = np.atleast_1d(z)
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
@@ -731,11 +734,16 @@ def srange(data, x, x_min=0, x_max=1e9):
     sdata = dup[xup < x_max]
     return sdata
 
-def mesrange(x, dx, y, dy, x_min=0, x_max=1e9):
+def mesrange(x, y, dx=None, dy=None, x_min=0, x_max=1e9):
     """ Restricts measured data to points where x_min < x < x_max. """
-    sx = srange(x, x, x_min, x_max); sdx = srange(dx, x, x_min, x_max)
-    sy = srange(y, x, x_min, x_max); sdy = srange(dy, x, x_min, x_max)
-    return sx, sdx, sy, sdy
+    sx = srange(x, x, x_min, x_max)
+    sy = srange(y, x, x_min, x_max)
+    sdx = None; sdy = None
+    if dx:
+        sdx = srange(dx, x, x_min, x_max)
+    if dy:
+        sdy = srange(dy, x, x_min, x_max)
+    return sx, sy, sdx, sdy
 
 def uncert(cval, gain=0, read=0):
     """ Associates uncertainty of measurement to a central value, assuming
