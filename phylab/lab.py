@@ -739,9 +739,9 @@ def mesrange(x, y, dx=None, dy=None, x_min=0, x_max=1e9):
     sx = srange(x, x, x_min, x_max)
     sy = srange(y, x, x_min, x_max)
     sdx = None; sdy = None
-    if dx:
+    if dx is not None:
         sdx = srange(dx, x, x_min, x_max)
-    if dy:
+    if dy is not None:
         sdy = srange(dy, x, x_min, x_max)
     return sx, sy, sdx, sdy
 
