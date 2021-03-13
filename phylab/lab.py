@@ -143,6 +143,10 @@ def chitest(prediction, data, unc=1., ddof=0, gauss=False, v=False):
         print('Chi square/ndof = %.1f/%d' % (chisq, ndof))
     return chisq, ndof, resn
 
+def residual_squares(pars, model, x, y, unc=1):
+    exval = model(x, *pars)
+    return np.sum(((y - exval)/unc) ** 2)
+
 def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
     """
     Chi-square as a function of two model function parameters (alpha, beta),
@@ -186,7 +190,7 @@ def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
         return model(x, *ordered_pars)
     if dy is None:
         return np.array([[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta])
-    return np.array([[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta])
+    return np.array([[residual_squares([a, b], fxmodel, x, y, unc=dy) for a in alpha] for b in beta])
 
 def R_squared(observed, predicted):
     return 1. - (np.var(observed - predicted)/np.var(observed))
@@ -725,7 +729,7 @@ def FFT(time, signal, window=None, beta=0, specres=None):
         return freq, tran, fres, frstd
     return freq, tran
 
-# UTILITIES FOR MANAGING DATA FILES
+# UTILITIES FOR MANAGING DATA AND FILES
 def srange(data, x, x_min=0, x_max=1e9):
     """ Returns sub-array containing data inside selected range over
         dynamic variable x in [x_min, x_max]. If x is equal to data,
@@ -758,6 +762,16 @@ def std_unc(measure, ADC=None):
     unc = np.diff(V)/2/np.sqrt(12)
     return np.append(unc, np.mean(unc))
 
+def synth_data(model, domain, pars=None, wnoise=None, npts=100):
+    """ Creates noisy data arrays of npts points shaped like model(domain). """
+    if len(domain) == 2:
+        domain = np.linspace(start=domain[0], stop=domain[1], num=npts)
+    if wnoise is None:
+        wnoise = [0, 1]
+    ideal = model(domain, *pars) if pars is not None else model(domain) 
+    noise = np.random.normal(loc=wnoise[0], scale=wnoise[1], size=domain.shape)
+    return ideal + noise, domain
+    
 def interleave(a, b):
     """ Join two sequences a & b by alternating their elements. """
     merged = [None]*(len(a)+len(b))
