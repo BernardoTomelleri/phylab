@@ -29,21 +29,21 @@ def linear(x, m, q):
 def exp_growth(t, tau=1, scale=1):
     return scale*np.exp(t/tau)
 
-def generate_init(model, obs, unc=1):
+def generate_init(model, x, y, unc=1):
     par_bounds = []
     par_bounds.append([0.0, 1e16]) # search bounds for L
     par_bounds.append([0., 1.]) # search bounds for k
     par_bounds.append([-100, 1000]) # search bounds for t0
     #par_bounds.append([0, 1e4]) # search bounds for ofs
 
-    result = differential_evolution(residual_squares, par_bounds, args=[model, obs, unc], seed=42)
+    result = differential_evolution(residual_squares, par_bounds, args=[model, x, y, unc], seed=42)
     return result.x
 
 NUM_DAYS = 20
 url = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
 df = pd.read_csv(url, parse_dates=['data'])
 last = df[['data', 'nuovi_positivi', 'totale_ospedalizzati','isolamento_domiciliare']].tail(n=NUM_DAYS)
-last.insert(2, 'nuovi_positivi (7-day avg.)', avg_filter(df['nuovi_positivi'])[-NUM_DAYS:])
+last.insert(2, 'nuovi positivi (7-day avg.)', avg_filter(df['nuovi_positivi'])[-NUM_DAYS:])
 patient_data = last[last.columns[1:]].to_numpy(dtype=np.float64).T
 days = np.array(range(1, NUM_DAYS + 1))
 
@@ -66,7 +66,7 @@ for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
                                        linear(days, *lin_pars), ddof=len(lin_pars),
                                        gauss=True, v=True)
     if logi:  # logistic fit
-        genetic_pars = generate_init(model=logistic, obs=patient, unc=pat_err)
+        genetic_pars = generate_init(model=logistic, x=days, y=patient, unc=pat_err)
         popt, pcov, dy = propfit(logistic, days, patient, p0=genetic_pars, dy=pat_err, alg='trf')
         if brute:
             init = [10, 0.001, 1]
