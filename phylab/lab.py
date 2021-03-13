@@ -188,8 +188,7 @@ def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
         idxs = np.argwhere(np.invert(fixed))
         ordered_pars[idxs[0]] = a; ordered_pars[idxs[1]] = b
         return model(x, *ordered_pars)
-    if dy is None:
-        return np.array([[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta])
+
     return np.array([[residual_squares([a, b], fxmodel, x, y, unc=dy) for a in alpha] for b in beta])
 
 def R_squared(observed, predicted):
