@@ -14,6 +14,7 @@ from collections import namedtuple
 # Scientific library imports
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.optimize import differential_evolution
 from scipy.odr import odrpack
 from scipy import signal as sg
 from scipy import special as sp
@@ -143,10 +144,6 @@ def chitest(prediction, data, unc=1., ddof=0, gauss=False, v=False):
         print('Chi square/ndof = %.1f/%d' % (chisq, ndof))
     return chisq, ndof, resn
 
-def residual_squares(pars, model, x, y, unc=1):
-    exval = model(x, *pars)
-    return np.sum(((y - exval)/unc) ** 2)
-
 def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
     """
     Chi-square as a function of two model function parameters (alpha, beta),
@@ -193,7 +190,16 @@ def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
     return np.array([[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta])
 
 def R_squared(observed, predicted):
+    """ Returns R square measure of goodness of fit for predicted model. """
     return 1. - (np.var(observed - predicted)/np.var(observed))
+
+def residual_squares(pars, model, coords, unc=1):
+    """ Sum of squared errors as a function of pars to be minimized by 
+    differential evolution algorithm. This cannot follow standard
+    argument order, therefore is not meant to be used directly. """
+    x, y = coords
+    exval = model(x, *pars)
+    return np.sum(((y - exval)/unc) ** 2)
 
 def errcor(covm):
     """ Computes parameter error and correlation matrix from covariance. """
@@ -354,7 +360,7 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
             prnpar(popt, perr, model)
             # Chi square test
             chisq, ndof = chitest(model(xmes, *popt), ymes, deff, ddof=len(popt))[:-1]
-            print(f'Normalized chi square: {chisq/ndof:.2e}')
+            print(f'reduced chi square: {chisq/ndof:.2e}')
             # Normalized parameter covariance
             print('Correlation matrix:\n', pcor)
             break
@@ -400,6 +406,18 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
     out.pprint()
     print('Chi square/ndof = %.1f/%d' % (out.sum_square, len(ymes)-len(p0)))
     return popt, pcov
+
+def gen_init(model, coords, bounds, unc=1):
+    """ Differential evolution algorithm to guess valid initial parameter
+    values within bounds in order to fit model to coords. """
+    if bounds is None:
+        bounds = []
+        for i in len(getfullargspec(model)[0] - 1):
+            bounds.append([-1e8, 1e8])
+
+    result = differential_evolution(residual_squares, bounds,
+                                    args=[model, coords, unc], seed=42)
+    return result.x
 
 def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, out=False):
     """ Removes outliers from measured data. A sampled point is considered an

@@ -5,10 +5,8 @@ Created on Sat Mar 13 18:01:19 2021
 @author: berni
 """
 import pandas as pd
-from scipy.optimize import differential_evolution
 from phylab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
-                    curve_fit, tick, logistic, residual_squares)
-import phylab as lab
+                    curve_fit, tick, logistic, gen_init, R_squared, days_from_epoch)
 
 ''' Variables that control the script '''
 lin = True # fit data points with linear model
@@ -29,21 +27,14 @@ def linear(x, m, q):
 def exp_growth(t, tau=1, scale=1):
     return scale*np.exp(t/tau)
 
-def generate_init(model, x, y, unc=1):
-    par_bounds = []
-    par_bounds.append([0.0, 1e16]) # search bounds for L
-    par_bounds.append([0., 1.]) # search bounds for k
-    par_bounds.append([-100, 1000]) # search bounds for t0
-    #par_bounds.append([0, 1e4]) # search bounds for ofs
-
-    result = differential_evolution(residual_squares, par_bounds, args=[model, x, y, unc], seed=42)
-    return result.x
-
 NUM_DAYS = 20
-url = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
+url = ('https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-'
+       'andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv')
 df = pd.read_csv(url, parse_dates=['data'])
-last = df[['data', 'nuovi_positivi', 'totale_ospedalizzati','isolamento_domiciliare']].tail(n=NUM_DAYS)
-last.insert(2, 'nuovi positivi (7-day avg.)', avg_filter(df['nuovi_positivi'])[-NUM_DAYS:])
+last = df[['data', 'nuovi_positivi', 'totale_ospedalizzati',
+           'isolamento_domiciliare']].tail(n=NUM_DAYS)
+last.insert(2, 'nuovi_positivi (7-day avg.)',
+            avg_filter(df['nuovi_positivi'])[-NUM_DAYS:])
 patient_data = last[last.columns[1:]].to_numpy(dtype=np.float64).T
 days = np.array(range(1, NUM_DAYS + 1))
 
@@ -66,13 +57,17 @@ for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
                                        linear(days, *lin_pars), ddof=len(lin_pars),
                                        gauss=True, v=True)
     if logi:  # logistic fit
-        genetic_pars = generate_init(model=logistic, x=days, y=patient, unc=pat_err)
-        popt, pcov, dy = propfit(logistic, days, patient, p0=genetic_pars, dy=pat_err, alg='trf')
+        par_bounds = [[0.0, 1e16], [0., 1.], [-100, 1000]]
+        genetic_pars = gen_init(model=logistic, coords=[days, patient],
+                                bounds=par_bounds, unc=pat_err)
+        popt, pcov, dy = propfit(logistic, days, patient,
+                                 p0=genetic_pars, dy=pat_err, alg='trf')
         if brute:
             init = [10, 0.001, 1]
             for i in range(100):
                 try:
-                    popt, pcov = curve_fit(logistic, days, patient, p0=init, sigma=pat_err, method='trf')
+                    popt, pcov = curve_fit(logistic, days, patient,
+                                           p0=init, sigma=pat_err, method='trf')
                 except RuntimeError:
                     print('Runtime Error: reached maxfev=800 number of calls')
                 if valid_cov(pcov):
@@ -85,16 +80,18 @@ for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
         chisq_l, ndof_l, resn_l, sigma_l = chitest(patient, pat_err,
                                        logistic(days, *popt), ddof=len(popt),
                                        gauss=True, v=True)
+        print(f'R^2 = {R_squared(patient, logistic(days, *popt)):.2f} \n')
 
     # Turn last days range into corresponding dates
-    from_epoch = lab.days_from_epoch(df['data'].iloc[-1]) - NUM_DAYS
+    from_epoch = days_from_epoch(df['data'].iloc[-1]) - NUM_DAYS
     # Plot results for exponential and logistic fit
     ax.errorbar(days + from_epoch, patient, pat_err, None,
                 marker='.',  ms=3, elinewidth=1., capsize=1.5, ls='', label=name)
     ax.plot_date(days + from_epoch, exp_growth(days, *pars), ls='-',
                  marker=None, label=r'exp fit $\chi^2 = %.1f/%d$' % (chisq, ndof))
-    if logi: ax.plot_date(days + from_epoch, logistic(days, *popt), ls='-',
-                 marker=None, label=r'logistic fit $\chi^2 = %.1f/%d$' % (chisq_l, ndof_l))
+    if logi:
+        ax.plot_date(days + from_epoch, logistic(days, *popt), ls='-',
+        marker=None, label=r'logistic fit $\chi^2 = %.1f/%d$' % (chisq_l, ndof_l))
     grid(ax, xlab=False, ylab=False)
     if lin:
         ax.plot_date(days + from_epoch, linear(days, *lin_pars), ls='-',

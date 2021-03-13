@@ -24,6 +24,6 @@ def synth_data(model, domain, pars=None, wnoise=None, npts=100):
     noise = np.random.normal(loc=wnoise[0], scale=wnoise[1], size=domain.shape)
     return ideal + noise, domain
 
-data, x = synth_data(gaussian_CDF, domain=[-1, 1], pars=[0, 1], wnoise=[0, 0.1])
+data, x = synth_data(voigt_CDF, domain=[-1, 1], pars=[1, 1], wnoise=[0, 0.1])
 fig, ax = plt.subplots()
 ax.plot(x, data)
