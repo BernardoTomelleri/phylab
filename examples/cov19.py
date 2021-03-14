@@ -5,7 +5,7 @@ Created on Sat Mar 13 18:01:19 2021
 @author: berni
 """
 import pandas as pd
-from lab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
+from phylab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
                     curve_fit, tick, logistic, gen_init, R_squared, days_from_epoch,
                     fit_test,)
 

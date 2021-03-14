@@ -51,9 +51,19 @@ def PlotHistNorm(data, log=False):
     lab.grid(ax, ylab='Entries/bin')
     ax.set_xlim(min(x), max(x))
 
-data, x = lab.synth_data(lab.gaussian, domain=[-5, 5], pars=[0, 1], wnoise=[0, 0.1])
+def three_gaussians(x, pars):
+    return lab.gaussian(x, *pars[0]) + \
+     lab.gaussian(x, *pars[1]) + lab.gaussian(x, *pars[2])
+    
+dist_pars = [[[0, 3], [1, 3], [2, 3]]]
+noise_pars = [0, 0.1]
+npts = 100
+data, x = lab.synth_data(three_gaussians, domain=[-10, 10], pars=dist_pars,
+                         wnoise=noise_pars, npts=npts)
 pars, covm, dy = lab.propfit(lab.gaussian, x, data, dy=np.ones_like(data))
 fig, ax = plt.subplots()
 lab.grid(ax, ylab='$p(x)$')
 ax.scatter(x, data)
 ax.plot(x, lab.gaussian(x, *pars))
+
+PlotHistNorm(np.random.normal(*noise_pars, size=100))

@@ -26,7 +26,7 @@ from matplotlib import dates
 # Standard argument order for periodical functions:
 # A: Amplitude, frq: frequency, phs: phase, ofs: DC offset, tau: damp time
 args = namedtuple('pars', 'A frq phs ofs')
-goodness = namedtuple('ANOVA', 'chi ndof resn chi_pval R aR F F_pval')
+goodness = namedtuple('ANOVA', 'chi ndof chi_pval R aR F F_pval')
 
 def sine(t, A, frq, phs=0, ofs=0):
     """ Sinusoidal model function. Standard argument order """
@@ -66,30 +66,30 @@ def coope_circ(coords, Xc=0, Yc=0, Rc=1):
     x, y = coords
     return Xc*x + Yc*y + Rc
 
-def gaussian(x, mean=0, sigma=1):
+def gaussian(x, mean=0, sigma=1, scale=1):
     """ Gaussian or normal probability distribution. """
-    return np.exp( - np.square((x - mean)/(sigma))/2.) / sigma*np.sqrt(2*np.pi)
+    return scale*np.exp( - np.square((x - mean)/(sigma))/2.) / sigma*np.sqrt(2*np.pi)
 
-def gaussian_CDF(x, mean=0, sigma=1):
+def gaussian_CDF(x, mean=0, sigma=1, scale=1):
     """ Gaussian or normal cumulative distribution. """
-    return (1 + sp.erf((x - mean) / (np.sqrt(2)*sigma)))/2.
+    return scale*(1 + sp.erf((x - mean) / (np.sqrt(2)*sigma)))/2.
 
-def lorentzian(x, x0=0, HWHM=1):
+def lorentzian(x, x0=0, HWHM=1, scale=1):
     """ Cauchy - Lorentz - Breit - Wigner probability distribution. """
-    return (HWHM / ((x - x0)**2 + HWHM**2))/np.pi
+    return scale*(HWHM / ((x - x0)**2 + HWHM**2))/np.pi
 
-def lorentzian_CDF(x, x0=0, HWHM=1):
+def lorentzian_CDF(x, x0=0, HWHM=1, scale=1):
     """ Cauchy - Lorentz - Breit - Wigner cumulative distribution. """
-    return np.arctan((x - x0) / HWHM)/np.pi + 0.5
+    return scale*(np.arctan((x - x0) / HWHM)/np.pi + 0.5)
 
-def voigt(x, sigma=1, gamma=1):
+def voigt(x, sigma=1, gamma=1, scale=1):
     """ Voigt profile / probability density function. """
     r2sigma = np.sqrt(2)*sigma
-    return np.real(sp.wofz((x + 1j*gamma)/r2sigma)) / r2sigma*np.sqrt(np.pi)
+    return scale*np.real(sp.wofz((x + 1j*gamma)/r2sigma)) / r2sigma*np.sqrt(np.pi)
 
-def logistic(t, L=1, k=1, t0=0):
+def logistic(x, L=1, k=1, x0=0):
     """ Logistic function or sigmoid curve. """
-    return L/(1 + np.exp(k*(t0 - t)))
+    return L/(1 + np.exp(k*(x0 - x)))
 
 def fder(f, x, pars):
     return np.gradient(f(x, *pars), 1)
