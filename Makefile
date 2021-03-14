@@ -28,7 +28,7 @@ release: build
 	python3 -m twine upload dist/*
 
 readme:
-	python3 -m readme2tex --nocdn --readme readtex.md --output README.md
+	python3 -m readme2tex --nocdn --readme read.tex.md --output README.md
 
 clean:
 	rm -r dist build __pycache__ *.egg-info *.swp *~ .*.un~ 

@@ -5,12 +5,13 @@ Created on Sat Mar 13 18:01:19 2021
 @author: berni
 """
 import pandas as pd
-from phylab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
-                    curve_fit, tick, logistic, gen_init, R_squared, days_from_epoch)
+from lab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
+                    curve_fit, tick, logistic, gen_init, R_squared, days_from_epoch,
+                    fit_test,)
 
 ''' Variables that control the script '''
 lin = True # fit data points with linear model
-logi = True # fit data points with logistic model
+logi = False # fit data points with logistic model
 brute = False # brute force search for initial fit parameters
 
 def avg_filter(a, past=7):
@@ -46,16 +47,17 @@ for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
     pars[0] = 1./pars[0]; pars[1] = np.exp(pars[1])
     errs, corm = errcor(covm)
     prnpar(pars, errs, model=exp_growth)
-    chisq, ndof, resn, sigma = chitest(patient, pat_err,
-                                       exp_growth(days, *pars), ddof=len(pars),
-                                       gauss=True, v=True)
+    chisq, ndof, resn, sigma = chitest(exp_growth(days, *pars), patient,
+                                       pat_err, ddof=len(pars), gauss=True, v=True)
     if lin:  # linear fit
         lin_pars, lin_covm, deff = propfit(linear, days, patient, dy=pat_err)
         lin_perr, lin_pcor = errcor(covm)
         prnpar(lin_pars, lin_perr, model=linear)
-        lin_chisq, lin_ndof, lin_resn, lin_sigma = chitest(patient, pat_err,
-                                       linear(days, *lin_pars), ddof=len(lin_pars),
-                                       gauss=True, v=True)
+        lin_chisq, lin_ndof, lin_resn, lin_sigma = \
+        chitest(linear(days, *lin_pars), patient, pat_err, ddof=len(lin_pars),
+                gauss=True, v=True)
+        goodness = fit_test(linear, coords=[days, patient], popt=lin_pars,
+                            unc=pat_err, v=True)
     if logi:  # logistic fit
         par_bounds = [[0.0, 1e16], [0., 1.], [-100, 1000]]
         genetic_pars = gen_init(model=logistic, coords=[days, patient],
@@ -77,10 +79,11 @@ for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
 
         perr, pcor = errcor(pcov)
         prnpar(popt, perr, model=logistic)
-        chisq_l, ndof_l, resn_l, sigma_l = chitest(patient, pat_err,
-                                       logistic(days, *popt), ddof=len(popt),
-                                       gauss=True, v=True)
-        print(f'R^2 = {R_squared(patient, logistic(days, *popt)):.2f} \n')
+        chisq_l, ndof_l, resn_l, sigma_l = \
+        chitest(logistic(days, *popt), patient, pat_err, ddof=len(popt),
+                gauss=True, v=True)
+        goodness = fit_test(logistic, coords=[days, patient], popt=popt,
+                            unc=pat_err, v=True)
 
     # Turn last days range into corresponding dates
     from_epoch = days_from_epoch(df['data'].iloc[-1]) - NUM_DAYS

@@ -18,6 +18,7 @@ from scipy.optimize import differential_evolution
 from scipy.odr import odrpack
 from scipy import signal as sg
 from scipy import special as sp
+from scipy import stats
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from matplotlib import dates
@@ -25,6 +26,7 @@ from matplotlib import dates
 # Standard argument order for periodical functions:
 # A: Amplitude, frq: frequency, phs: phase, ofs: DC offset, tau: damp time
 args = namedtuple('pars', 'A frq phs ofs')
+goodness = namedtuple('ANOVA', 'chi ndof resn chi_pval R aR F F_pval')
 
 def sine(t, A, frq, phs=0, ofs=0):
     """ Sinusoidal model function. Standard argument order """
@@ -188,11 +190,7 @@ def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
     if dy is None:
         return np.array([[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta])
     return np.array([[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta])
-
-def R_squared(observed, predicted):
-    """ Returns R square measure of goodness of fit for predicted model. """
-    return 1. - (np.var(observed - predicted)/np.var(observed))
-
+        
 def residual_squares(pars, model, coords, unc=1):
     """ Sum of squared errors as a function of pars to be minimized by 
     differential evolution algorithm. This cannot follow standard
@@ -200,6 +198,62 @@ def residual_squares(pars, model, coords, unc=1):
     x, y = coords
     exval = model(x, *pars)
     return np.sum(((y - exval)/unc) ** 2)
+
+def R_squared(observed, predicted, uncertainty=1):
+    """ Returns R square measure of goodness of fit for predicted model. """
+    weight = 1./uncertainty
+    return 1. - (np.var((observed - predicted)*weight) / np.var(observed*weight))
+
+def adjusted_R(model, coords, popt, unc=1):
+    """ Returns adjusted R square test for optimal parameters popt. """
+    x, y = coords
+    R = R_squared(y, model(x, *popt), uncertainty=unc)
+    adj = (R - 1.) / (1 - len(popt)/len(y))
+    return 1. + adj, R
+
+def Ftest(model, coords, popt, unc=1):
+    """ Fisher test for variance of fitted vs constant model. """
+    x, y = coords
+    SSE = residual_squares(popt, model, coords, unc=unc)
+    chired = SSE / (len(y) - len(popt))
+    SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
+    return SSM/len(popt) / chired
+
+def fit_test(model, coords, popt, unc=1, v=False):
+    """
+    Evaluates goodness of fit metrics for best fit parameters popt with model
+    to data coords as defined in goodness named tuple.
+
+    Parameters
+    ----------
+    model : callable
+        Model function that minimizes square residuals |y - model(x)|^2.
+    coords : array_like
+        List or array of [x, y] measured data coordinates.
+    popt : array_like
+        Optimal values for the parameters of the model.
+    unc : array_like, optional
+        Uncertainties associated to y data coordinates. The default is 1.
+
+    Returns
+    -------
+    named_tuple
+        Results of goodness-of-fit tests.
+
+    """
+    x, y = coords
+    ddof = len(popt)
+    chisq, ndof, resn = chitest(model(x, *popt), y, unc=unc, ddof=ddof)
+    chi_pval = stats.chi2.sf(chisq, ndof)
+    adj_R, R = adjusted_R(model, coords, popt)
+    SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
+    F = SSM/ddof / (chisq/ndof)
+    F_pval = stats.f.sf(F, ddof, ndof)
+    ANOVA = goodness(chisq, ndof, chi_pval, R, adj_R, F, F_pval)
+    if v:
+        print(ANOVA)
+        #prnpar(pars=ANOVA, perr=np.zeros(len(ANOVA)), manual=ANOVA._fields)
+    return ANOVA
 
 def errcor(covm):
     """ Computes parameter error and correlation matrix from covariance. """
@@ -217,12 +271,17 @@ def prncor(corm, model=None, manual=None):
         for j in range(1 + i, np.size(corm, 1)):
             print('corr_%s-%s = %.3f' % (pnms[i], pnms[j], corm[i][j]))
 
-def prnpar(pars, perr, model=None, prec=2, manual=None):
+def prnpar(pars, perr=None, model=None, prec=2, manual=None):
     """ Pretty print fit parameters to specified precision %.<prec>f """
     pnms = getfullargspec(model)[0][1:] if manual is None else manual
-    dec = np.abs((np.log10(perr) - prec)).astype(int) if all(perr) > 0 else np.ones_like(pars)
-    for nam, par, err, d in zip(pnms, pars, perr, dec):
-        print(f'{nam} = {par:.{d}f} +- {err:.{d}f}')
+    if perr is None:
+        perr = np.empty(shape=pars.shape)
+    for nam, par, err in zip(pnms, pars, perr):
+        if err is not None and err > 0:
+            dec = np.abs((np.log10(err) - prec)).astype(int)
+            print(f'{nam} = {par:.{dec}f} +- {err:.{dec}f}')
+        else:
+            print(f'{nam} = {par:.{prec}f}')
 
 def RMS(seq):
     """ Evaluates Root Mean Square of data sequence through Numpy module. """
@@ -340,7 +399,9 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
         the same dy passed as argument if propagation was not necessary.
 
     """
-    deff = dy
+    if np.isscalar(dy):
+        dy = np.full(shape=ymes.shape, fill_value=dy)
+    deff = dy if dy is not None else np.ones_like(ymes)
     plist = []; elist = []
     for n in range(max_iter):
         popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg,
