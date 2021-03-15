@@ -11,7 +11,7 @@ from phylab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
 
 ''' Variables that control the script '''
 lin = True # fit data points with linear model
-logi = False # fit data points with logistic model
+logi = True # fit data points with logistic model
 brute = False # brute force search for initial fit parameters
 
 def avg_filter(a, past=7):
@@ -38,7 +38,7 @@ last.insert(2, 'nuovi_positivi (7-day avg.)',
             avg_filter(df['nuovi_positivi'])[-NUM_DAYS:])
 patient_data = last[last.columns[1:]].to_numpy(dtype=np.float64).T
 days = np.array(range(1, NUM_DAYS + 1))
-
+last.columns = last.columns.str.replace('_', ' ')
 fig_fit, axs = plt.subplots(nrows=2, ncols=2)
 for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
     pat_err = 1e-2*patient
@@ -88,8 +88,8 @@ for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
     # Turn last days range into corresponding dates
     from_epoch = days_from_epoch(df['data'].iloc[-1]) - NUM_DAYS
     # Plot results for exponential and logistic fit
-    ax.errorbar(days + from_epoch, patient, pat_err, None,
-                marker='.',  ms=3, elinewidth=1., capsize=1.5, ls='', label=name)
+    ax.errorbar(days + from_epoch, patient, pat_err, None, marker='.', ms=3,
+                elinewidth=1., capsize=1.5, ls='', label=name)
     ax.plot_date(days + from_epoch, exp_growth(days, *pars), ls='-',
                  marker=None, label=r'exp fit $\chi^2 = %.1f/%d$' % (chisq, ndof))
     if logi:

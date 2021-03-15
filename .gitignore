@@ -4,6 +4,7 @@ venv/
 
 #Testing
 .pytest_cache
+*.pylint.d
 *.tmp*
 
 #Installing & Building

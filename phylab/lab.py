@@ -63,6 +63,8 @@ def parabola(x_range, A, T, phs=0, ofs=0):
     return y
 
 def coope_circ(coords, Xc=0, Yc=0, Rc=1):
+    """ function of circle pars to be minimized by Coope fit algorithm.
+    This is not meant to be used directly. """
     x, y = coords
     return Xc*x + Yc*y + Rc
 
@@ -92,6 +94,7 @@ def logistic(x, L=1, k=1, x0=0):
     return L/(1 + np.exp(k*(x0 - x)))
 
 def fder(f, x, pars):
+    """ Numerical single variable derivative (for automatic error propagation). """
     return np.gradient(f(x, *pars), 1)
 
 def LPF(data, gain=2e-4):
@@ -190,9 +193,9 @@ def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
     if dy is None:
         return np.array([[((y - fxmodel(a, b))**2).sum() for a in alpha] for b in beta])
     return np.array([[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta])
-        
+
 def residual_squares(pars, model, coords, unc=1):
-    """ Sum of squared errors as a function of pars to be minimized by 
+    """ Sum of squared errors as a function of pars to be minimized by
     differential evolution algorithm. This cannot follow standard
     argument order, therefore is not meant to be used directly. """
     x, y = coords
@@ -670,21 +673,14 @@ def days_from_epoch(date):
 def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, out=None, date=None):
     """ Produces standard plot of best-fit curve describing measured data
     with residuals underneath. """
-    # Variables that control the plot
-    # kwargs.setdefault(
-    #     {
-    #     'log' : True, # log-scale axis/es
-    #     'dB' : True, # plots response y-axis in deciBels
-    #     'tex' : True, # LaTeX typesetting maths and descriptions
-    #     })
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, gridspec_kw={
-    'wspace': 0.05, 'hspace': 0.05, 'height_ratios': [3, 1]})
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True,
+                                   gridspec_kw={'height_ratios': [3, 1]})
     space = np.linspace(np.min(0.9*xmes), np.max(1.05*xmes), 2000)
     if out is not None:
         space = np.linspace(np.min(0.9*out), np.max(1.05*out), 2000)
     chisq, ndof, resn = chitest(model(xmes, *pars), ymes, dy, ddof=len(pars))
     ax1 = grid(ax1, xlab=False, ylab=False)
-    ax1.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.5, elinewidth=1., capsize=1.5,
+    ax1.errorbar(xmes, ymes, dy, dx, 'ko', ms=2, elinewidth=1., capsize=1.5,
                  ls='', label='data')
     if date is not None:
         ax1.plot_date(xmes + days_from_epoch(date) - len(xmes), model(xmes, *pars),
@@ -693,10 +689,11 @@ def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, out=None, date=Non
         ax1.plot(space, model(space, *pars), c='gray',
                  label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
 
-    ax2 = grid(ax2, xlab=False, ylab='residuals')
+    ax2 = grid(ax2, ylab='residuals')
     ax2.errorbar(xmes, resn, None, None, 'ko', elinewidth=0.5, capsize=1.,
-                 ms=1., ls='--', zorder=5)
+                 ms=2, ls='--', lw=1, zorder=5)
     ax2.axhline(0, c='r', alpha=0.7, zorder=10)
+    fig.tight_layout()
     return fig, (ax1, ax2)
 
 def plot3d(x, y, z, xlab=None, ylab=None, zlab=None):
@@ -728,7 +725,7 @@ def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=F
         fig, (ax2, ax1) = plt.subplots(2, 1,
                                          gridspec_kw={'wspace': 0.25, 'hspace': 0.25})
     ax1 = grid(ax1, xlab='Frequency $f$ [Hz]', ylab=False)
-    ax1.plot(freq, fft, c='k', lw='0.9')
+    ax1.plot(freq, fft, c='k', lw=0.9)
     ax1.set_ylabel(r'$\widetilde{V}(f)$ Magnitude [%s]' % ('dB' if dB else 'arb. un.'))
     if re_im:
         ax1.set_ylabel('Fourier Transform [Re]')
@@ -736,7 +733,7 @@ def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=F
     ax2 = grid(ax2, xlab='Time $t$ [s]', ylab='$V(t)$ [arb. un.]')
     if mod_ph or re_im:
         fft = tran.imag if re_im else np.angle(tran)
-        ax2.plot(freq, fft, c='k', lw='0.9')
+        ax2.plot(freq, fft, c='k', lw=0.9)
         ax1.set_xlabel(None)
         ax2.set_xlabel('Frequency $f$ [Hz]')
         ax2.set_ylabel(r'$\widetilde{V}(f)$ Phase [rad]')
@@ -847,10 +844,10 @@ def synth_data(model, domain, pars=None, wnoise=None, npts=100):
         domain = np.linspace(start=domain[0], stop=domain[1], num=npts)
     if wnoise is None:
         wnoise = [0, 1]
-    ideal = model(domain, *pars) if pars is not None else model(domain) 
+    ideal = model(domain, *pars) if pars is not None else model(domain)
     noise = np.random.normal(loc=wnoise[0], scale=wnoise[1], size=domain.shape)
     return ideal + noise, domain
-    
+
 def interleave(a, b):
     """ Join two sequences a & b by alternating their elements. """
     merged = [None]*(len(a)+len(b))
