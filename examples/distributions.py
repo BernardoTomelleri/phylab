@@ -10,7 +10,7 @@ import mpmath as mp
 
 ''' Variables that control the script '''
 tex = False  # LaTeX typesetting maths and descriptions
-gen = False  # generate distribution data points
+gen = True  # generate distribution data points
 SEED = 3  # for repeatable results. Change to None to disable
 
 def voigt_CDF(x, sigma=1, gamma=1):

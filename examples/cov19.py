@@ -6,8 +6,7 @@ Created on Sat Mar 13 18:01:19 2021
 """
 import pandas as pd
 from phylab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
-                    curve_fit, tick, logistic, gen_init, R_squared, days_from_epoch,
-                    fit_test,)
+                    curve_fit, tick, logistic, gen_init, days_from_epoch, fit_test)
 
 ''' Variables that control the script '''
 lin = True # fit data points with linear model
