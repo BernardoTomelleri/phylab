@@ -12,7 +12,8 @@ help:
 	@echo "build - build package with setup.py"	
 	@echo "check - run twine check on built distribution"
 	@echo "readme - generate Markdown documentation LaTeX code with .svgs"
-	@echo "release - Publish packaged release to PyPI"
+	@echo "release - publish packaged release to PyPI"
+	@echo "venv - create and activate virtual environment with SciPy"
 
 prereqs:
 	python3 -m pip install --upgrade pip
@@ -29,6 +30,11 @@ release: build
 
 readme:
 	python3 -m readme2tex --nocdn --readme read.tex.md --output README.md
+
+venv:
+	python3 -m venv venv
+	source venv/bin/activate
+	python3 -m pip install --upgrade numpy scipy matplotlib
 
 clean:
 	rm -r dist build __pycache__ *.egg-info *.swp *~ .*.un~ 

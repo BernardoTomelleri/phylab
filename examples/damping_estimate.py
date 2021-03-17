@@ -16,7 +16,7 @@ def naive_tau(signal, time):
     idx = np.argmin(np.abs(signal - np.max(signal)/np.e))
     tau = time[idx] - time[np.argmax(signal)]
     return tau
-  
+
 def est_tau(signal, time, nbins=50):
     """ Attempts to find rough estimate of signal's damping time tau.
     WARNING: This is very much not guaranteed to work, use at your own risk. """

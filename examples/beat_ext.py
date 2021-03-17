@@ -52,44 +52,44 @@ for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
 
     axr.set_xlabel('Time [s]', x=0.94)
     if tix: lab.tick(axr, xmaj=10, ymaj=2, ymin=0.5)
-    
+
     if out:
-        timein, dtin, posin, dpin, timeout, dtout, posout, dpout = lab.outlier(
-                                time, dt, pos, dx, beat, pars, thr=4, out=True)
+        timein, posin, dtin, dpin, mask = lab.outlier(beat, time, pos, dt,
+                                                      deff, pars, thr=4, out=True)
         # propagated fit again without considering outliers
-        pars, covm, deff = propfit(beat, timein, posin, dpin, dtin, p0=pars)
+        pars, covm, dpin = propfit(beat, timein, posin, dtin, dpin, p0=pars)
         perr, pcor = errcor(covm)
         prnpar(pars, perr, model=beat)
-        chisq, ndof, resn, sigma = chitest(beat(timein, *pars), posin, unc=deff,
+        chisq, ndof, resn, sigma = chitest(beat(timein, *pars), posin, unc=dpin,
                                            ddof=len(pars), gauss=True, v=True)
-        normout = (posout - beat(timeout, *pars))/dpout
-        
+        #normout = (posout - beat(timeout, *pars))/dpout
+
         # Graph with outliers
-        figout, (axf, axr) = pltfitres(beat, timein, posin, dx=dtin, dy=deff, pars=pars)
-        axf.errorbar(timeout, posout, dpout, dtout, 'gx',  ms=3, elinewidth=1.,
-                     capsize=1.5, ls='', label='outliers')
+        figout, (axf, axr) = pltfitres(beat, time, pos, dx=dt, dy=deff, pars=pars, in_out=mask)
+        #axf.errorbar(timeout, posout, dpout, dtout, 'gx',  ms=3, elinewidth=1.,
+        #             capsize=1.5, ls='', label='outliers')
         axf.set_ylabel('Position %c [ADC counts]' %('A' if all(time == t_a) else 'B'))
         if tix: lab.tick(axf, xmaj=10, ymaj=50)
         legend = axf.legend(loc='best')
 
         axr.set_xlabel('Time [s]', x=0.94)
-        axr.errorbar(timeout, normout, None, None, 'gx', elinewidth = 0.7, capsize=0.7,
-                     ms=3., ls='', zorder=5)
+        #axr.errorbar(timeout, normout, None, None, 'gx', elinewidth = 0.7, capsize=0.7,
+        #             ms=3., ls='', zorder=5)
         if tix: lab.tick(axr, xmaj=5, ymaj=2, ymin=0.5)
-    
-    if fft: 
+
+    if fft:
         freq, tran, fres, frstd = lab.FFT(time, signal=(pos - pars[-2]), window=np.kaiser, beta=None)
         figfrq, (ax1, ax2) = lab.plotfft(freq, tran, norm=True, mod_ph=True, dB=True)
         if tix:
             ax1.set_xlim(0, 5)
             lab.tick(ax1, xmaj=0.5, ymaj=20)
-        
-    if chi:  
+
+    if chi:
         a_range = np.linspace(pars[1] - 3e3*perr[1], pars[1] + 3e3*perr[1], 100)
         b_range = np.linspace(pars[2] - 3e3*perr[2], pars[2] + 3e3*perr[2], 100)
         chi_ab = lab.chisq(model=beat, x=time, y=pos, alpha=a_range, beta=b_range,
                            varnames = ['frq_d', 'frq_m'], pars=pars, dy=dx)
-        
+
         fig3d, ax3d = lab.plot3d(x=a_range, y=b_range, z=chi_ab, xlab='$f_d$ [Hz]',
                                  ylab='$f_m$ [Hz]', zlab='$\chi^2(f_d, f_m)$')
         ax3d.set_zlim(0, None)

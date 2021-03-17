@@ -20,8 +20,27 @@ from scipy import signal as sg
 from scipy import special as sp
 from scipy import stats
 from matplotlib import pyplot as plt
-from matplotlib import cm
 from matplotlib import dates
+
+# Configuration file import
+from phylab.rc import (
+    cm,
+    GRID,
+    MAJ_TICKS,
+    MIN_TICKS,
+    DASHED_LINE,
+    PLOT_FIT_RESIDUALS,
+    MEASURE_MARKER,
+    OUTLIER_MARKER,
+    NORMRES_MARKER,
+    OUTRES_MARKER,
+    RES_HLINE,
+    SURFACE_PLOT,
+    FOURIER_COMPONENTS_PLOT,
+    FOURIER_SIGNAL_PLOT,
+    FOURIER_LINE,
+    FOURIER_MARKER
+)
 
 # Standard argument order for periodical functions:
 # A: Amplitude, frq: frequency, phs: phase, ofs: DC offset, tau: damp time
@@ -68,6 +87,15 @@ def coope_circ(coords, Xc=0, Yc=0, Rc=1):
     x, y = coords
     return Xc*x + Yc*y + Rc
 
+def logistic(x, L=1, k=1, x0=0):
+    """ Logistic function or sigmoid curve. """
+    return L/(1 + np.exp(k*(x0 - x)))
+
+def lorentzian(x, x0=0, A=1, gamma=0):
+    """ Lorentzian resonance curve with center at x0, maximum amplitude A
+    and damping coefficient gamma. """
+    return A/np.sqrt(4*(gamma*x)**2 + (x0**2 - x**2)**2)
+
 def gaussian(x, mean=0, sigma=1, scale=1):
     """ Gaussian or normal probability distribution. """
     return scale*np.exp( - np.square((x - mean)/(sigma))/2.) / sigma*np.sqrt(2*np.pi)
@@ -76,11 +104,11 @@ def gaussian_CDF(x, mean=0, sigma=1, scale=1):
     """ Gaussian or normal cumulative distribution. """
     return scale*(1 + sp.erf((x - mean) / (np.sqrt(2)*sigma)))/2.
 
-def lorentzian(x, x0=0, HWHM=1, scale=1):
+def cauchy(x, x0=0, HWHM=1, scale=1):
     """ Cauchy - Lorentz - Breit - Wigner probability distribution. """
     return scale*(HWHM / ((x - x0)**2 + HWHM**2))/np.pi
 
-def lorentzian_CDF(x, x0=0, HWHM=1, scale=1):
+def cauchy_CDF(x, x0=0, HWHM=1, scale=1):
     """ Cauchy - Lorentz - Breit - Wigner cumulative distribution. """
     return scale*(np.arctan((x - x0) / HWHM)/np.pi + 0.5)
 
@@ -88,10 +116,6 @@ def voigt(x, sigma=1, gamma=1, scale=1):
     """ Voigt profile / probability density function. """
     r2sigma = np.sqrt(2)*sigma
     return scale*np.real(sp.wofz((x + 1j*gamma)/r2sigma)) / r2sigma*np.sqrt(np.pi)
-
-def logistic(x, L=1, k=1, x0=0):
-    """ Logistic function or sigmoid curve. """
-    return L/(1 + np.exp(k*(x0 - x)))
 
 def fder(f, x, pars):
     """ Numerical single variable derivative (for automatic error propagation). """
@@ -222,6 +246,13 @@ def Ftest(model, coords, popt, unc=1):
     SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
     return SSM/len(popt) / chired
 
+def t_test(pars, perr):
+    """ Returns (one-sided) t-statistic values and probabilities for
+    fit parameters with standard deviation perr. """
+    t_vals = pars/perr
+    p_vals = stats.t.sf(np.abs(t_vals), df=len(pars))
+    return t_vals, p_vals
+
 def fit_test(model, coords, popt, unc=1, v=False):
     """
     Evaluates goodness of fit metrics for best fit parameters popt with model
@@ -278,7 +309,7 @@ def prnpar(pars, perr=None, model=None, prec=2, manual=None):
     """ Pretty print fit parameters to specified precision %.<prec>f """
     pnms = getfullargspec(model)[0][1:] if manual is None else manual
     if perr is None:
-        perr = np.empty(shape=pars.shape)
+        perr = np.zeros_like(pars)
     for nam, par, err in zip(pnms, pars, perr):
         if err is not None and err > 0:
             dec = np.abs((np.log10(err) - prec)).astype(int)
@@ -349,9 +380,10 @@ def valid_cov(covm):
 # Scipy.curve_fit with horizontal error propagation
 def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
             max_iter=20, thr=5, tail=3, rtol=0.5, v=False):
-    """ Modified non-linear least squares (curve_fit) algorithm to
-    fit model to a set of data, accounting for x-axis uncertainty
-    using linear error propagation onto y-axis uncertainty.
+    """
+    Modified non-linear least squares (curve_fit) algorithm to fit model to a
+    set of data, accounting for x-axis uncertainty using linear error
+    propagation onto y-axis uncertainty.
 
     Parameters
     ----------
@@ -428,15 +460,17 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
             # Normalized parameter covariance
             print('Correlation matrix:\n', pcor)
             break
-    if v and not(neg or con):
-        print('No condition met, number of calls to',
+    if not (neg or con):
+        print('Warning: No condition met, number of calls to',
               f'function has reached max_iter = {max_iter}.')
     return popt, pcov, deff
 
 # Scipy.odrpack orthogonal distance regressione
 def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
-    """ Finds best-fit model parameters for a set of data using ODR algorithm
-        (model function must be in form f(beta[n], x)).
+    """
+    Finds best-fit model parameters for a set of data using ODR algorithm.
+    model function must be in form f(beta[n], x) where beta is an array_like
+    containing the n floating paramenters of the model.
 
     Parameters
     ----------
@@ -460,6 +494,18 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
         Optimal values for the parameters (beta) of the model
     pcov : 2darray
         The estimated covariance of popt.
+        Note: by default ODR's covariance matrix is not rescaled cov * res_var
+        in other words absolute_sigma is True : the opposite of curve_fit's
+        default. Extracting uncertainties from pcov.diagonal() will result in
+        perr = out.sd_beta / sqrt(out.res_var)
+    out : scipy.odr.odrpack.Output
+        The Output class that stores the output of an ODR run, like:
+        out.res_var : Residual variance or Reduced chi square
+        out.delta : array of deviations along x from predicted model
+        out.eps : array of deviations along y from predicted model
+        out.iwork[10 or 12] : degrees of freedom of the fit, i.e., the number
+        of observations minus the number of parameters actually estimated
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.odr.Output.html
 
     """
     model = odrpack.Model(model)
@@ -468,8 +514,8 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
     out = odr.run()
     popt = out.beta; pcov = out.cov_beta
     out.pprint()
-    print('Chi square/ndof = %.1f/%d' % (out.sum_square, len(ymes)-len(p0)))
-    return popt, pcov
+    print('Chi square/ndof = %.1f/%d' % (out.sum_square, len(ymes)-len(popt)))
+    return popt, pcov, out
 
 def gen_init(model, coords, bounds, unc=1):
     """ Differential evolution algorithm to guess valid initial parameter
@@ -483,23 +529,22 @@ def gen_init(model, coords, bounds, unc=1):
                                     args=[model, coords, unc], seed=42)
     return result.x
 
-def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, out=False):
+def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, mask=False):
     """ Removes outliers from measured data. A sampled point is considered an
     outlier if it has absolute deviation y - model(x, *pars) > thr*dy. """
+    if dx is None:
+        dx = np.ones_like(xmes)
     if dy is None:
         dy = np.ones_like(ymes)
-    isin = [abs_devs(y, around=model(x, *pars)) < thr * sigma
-            for x, y, sigma in zip(xmes, ymes, dy)]
-    if out:
-        isout = np.invert(isin)
-        if dx is not None:
-            return (xmes[isin], dx[isin], ymes[isin], dy[isin],
-                    xmes[isout], dx[isout], ymes[isout], dy[isout])
-        return xmes[isin], ymes[isin], dy[isin], xmes[isout], ymes[isout], dy[isout]
-
-    if dx is not None:
-        return xmes[isin], dx[isin], ymes[isin], dy[isin]
-    return xmes[isin], ymes[isin], dy[isin]
+    if pars is not None:
+        isin = [abs_devs(y, around=model(x, *pars)) < thr * sigma
+                for x, y, sigma in zip(xmes, ymes, dy)]
+    else:
+        isin = [abs_devs(y, around=model(x)) < thr * sigma
+                for x, y, sigma in zip(xmes, ymes, dy)]
+    if mask:
+        return xmes[isin], ymes[isin], dx[isin], dy[isin], isin
+    return xmes[isin], ymes[isin], dx[isin], dy[isin]
 
 def medianout(data, thr=2.):
     """ Filters outliers based on median absolute deviation (MAD) around the
@@ -609,15 +654,15 @@ def grid(ax, which='major', xlab=None, ylab=None):
     """ Adds standard grid and labels for measured data plots to ax.
     Notice: omitting labels results in default x/y [arb. un.]. To leave a
     label intentionally blank x/y lab must be set to False. """
-    ax.grid(which=which, color='gray', linestyle='--', alpha=0.7)
+    ax.grid(which=which, **GRID)
     if xlab is not False:
         ax.set_xlabel('%s' % (xlab if xlab else 'x [arb. un.]'),
-                      x=0.9 - len(xlab)/500 if xlab else 0.9)
+                      x=0.9 - len(xlab)/500. if xlab else None)
     if ylab is not False:
         ax.set_ylabel('%s' % (ylab if ylab else 'y [arb. un.]'))
     ax.minorticks_on()
-    ax.tick_params(direction='in', length=4, width=1., top=True, right=True)
-    ax.tick_params(which='minor', direction='in', width=1., top=True, right=True)
+    ax.tick_params(**MAJ_TICKS)
+    ax.tick_params(**MIN_TICKS)
     return ax
 
 def tick(ax, xmaj=None, xmin=None, ymaj=None, ymin=None, zmaj=None, zmin=None, date=None):
@@ -667,21 +712,38 @@ def logz(ax, tix=None):
         ax.zaxis.set_minor_locator(plt.LogLocator(subs=np.arange(2, 10)*.1,
                                                   numticks=tix))
 
+def vline_tomax(coords, ax=None, label=None):
+    """ Draws vertical line to max. """
+    if ax is None:
+        ax = plt.gca()
+    x, y = coords
+    xmax = x[np.argmax(y)]
+    ymax=np.max(y)
+    ax.axvline(xmax, ymax=ymax/ax.get_ylim()[1], **DASHED_LINE,
+               label=f'ymax = {ymax:.2f} in xmax = {xmax:.2f}' if label else None)
+
 def days_from_epoch(date):
+    """ Returns number of days passed since UNIX Epoch. """
     return (date - datetime.datetime(1970, 1, 1)).days
 
-def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, out=None, date=None):
+def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=None, date=None):
     """ Produces standard plot of best-fit curve describing measured data
     with residuals underneath. """
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True,
-                                   gridspec_kw={'height_ratios': [3, 1]})
+    if axs is None:
+        fig, (ax1, ax2) = plt.subplots(**PLOT_FIT_RESIDUALS)
+    else:
+        ax1, ax2 = axs
     space = np.linspace(np.min(0.9*xmes), np.max(1.05*xmes), 2000)
-    if out is not None:
-        space = np.linspace(np.min(0.9*out), np.max(1.05*out), 2000)
     chisq, ndof, resn = chitest(model(xmes, *pars), ymes, dy, ddof=len(pars))
     ax1 = grid(ax1, xlab=False, ylab=False)
-    ax1.errorbar(xmes, ymes, dy, dx, 'ko', ms=2, elinewidth=1., capsize=1.5,
-                 ls='', label='data')
+    if in_out is not None:
+        ins, outs = in_out, np.invert(in_out)
+        ax1.errorbar(x=xmes[ins], y=ymes[ins], yerr=dy[ins],
+                     xerr=None if dx is None else dx[ins], **MEASURE_MARKER)
+        ax1.errorbar(x=xmes[outs], y=ymes[outs], yerr=dy[outs],
+                     xerr=None if dx is None else dx[outs], **OUTLIER_MARKER)
+    else:
+        ax1.errorbar(xmes, ymes, dy, dx, **MEASURE_MARKER)
     if date is not None:
         ax1.plot_date(xmes + days_from_epoch(date) - len(xmes), model(xmes, *pars),
                       c='gray', label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
@@ -690,25 +752,51 @@ def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, out=None, date=Non
                  label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
 
     ax2 = grid(ax2, ylab='residuals')
-    ax2.errorbar(xmes, resn, None, None, 'ko', elinewidth=0.5, capsize=1.,
-                 ms=2, ls='--', lw=1, zorder=5)
-    ax2.axhline(0, c='r', alpha=0.7, zorder=10)
-    fig.tight_layout()
+    if in_out is not None:
+        ax2.errorbar(xmes[ins], resn[ins], None, None, **NORMRES_MARKER)
+        ax2.errorbar(xmes[outs], resn[outs], None, None, **OUTRES_MARKER)
+    else:
+        ax2.errorbar(xmes, resn, None, None, **NORMRES_MARKER)
+    ax2.axhline(0, **RES_HLINE)
     return fig, (ax1, ax2)
 
 def plot3d(x, y, z, xlab=None, ylab=None, zlab=None):
     """ Produces standard 3d plot of z as a function of x and y. """
     X, Y = np.meshgrid(x, y)
     Z = np.atleast_1d(z)
-    fig = plt.figure()
+    fig = plt.figure(constrained_layout=True)
     ax = fig.add_subplot(projection='3d')
-    ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
-                    linewidth=0, antialiased=False, alpha=0.6)
+    ax.plot_surface(X, Y, Z, **SURFACE_PLOT)
     ax.contour(X, Y, Z, zdir='z', offset=0, cmap=cm.jet)
     ax.set_xlabel('%s' % (xlab if xlab else 'x [a.u.]'))
     ax.set_ylabel('%s' % (ylab if ylab else 'y [a.u.]'))
     ax.set_zlabel('%s' % (zlab if zlab else 'z [a.u.]'))
     return fig, ax
+
+def hist_normfit(data, ax=None, log=False):
+    """ Maximum (log) Likelihood Estimation fit for normal/gaussian
+    distribution of histogram data. """
+    pars = stats.norm.fit(data)
+    mean, sigma = pars
+    prnpar(pars, model=gaussian)
+    # Set generous limits
+    xlims = [-5*sigma + mean, 5*sigma + mean]
+    # Plot histogram
+    if ax is None:
+        fig, ax = plt.subplots(constrained_layout=True)
+    histdata = ax.hist(data, bins=20, alpha=0.3, log=log)
+
+    # Get histogram data, in this case bin edges
+    xh = [0.5 * (histdata[1][r] + histdata[1][r+1]) for r in range(len(histdata[1]) - 1)]
+    binwidth = (max(xh) - min(xh)) / len(histdata[1])
+    x = np.linspace(xlims[0], xlims[1], 500)
+    pdf_fitted = stats.norm.pdf(x, loc=mean, scale=sigma)
+    # Scale the fitted PDF by area of the histogram
+    pdf_fitted = pdf_fitted * (len(data)*binwidth)
+    #Plot PDF
+    ax.plot(x, pdf_fitted, 'r--')
+    grid(ax, ylab='Entries/bin')
+    return pars
 
 def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=False):
     """ Plot Fourier transform tran over frequency space freq by itself or
@@ -719,13 +807,11 @@ def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=F
     if dB:
         fft = 20*np.log10(np.abs(fft))
     if mod_ph or re_im:
-        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True,
-                                       gridspec_kw={'wspace': 0.05, 'hspace': 0.05})
+        fig, (ax1, ax2) = plt.subplots(**FOURIER_COMPONENTS_PLOT)
     else:
-        fig, (ax2, ax1) = plt.subplots(2, 1,
-                                         gridspec_kw={'wspace': 0.25, 'hspace': 0.25})
+        fig, (ax2, ax1) = plt.subplots(**FOURIER_SIGNAL_PLOT)
     ax1 = grid(ax1, xlab='Frequency $f$ [Hz]', ylab=False)
-    ax1.plot(freq, fft, c='k', lw=0.9)
+    ax1.plot(freq, fft, **FOURIER_LINE)
     ax1.set_ylabel(r'$\widetilde{V}(f)$ Magnitude [%s]' % ('dB' if dB else 'arb. un.'))
     if re_im:
         ax1.set_ylabel('Fourier Transform [Re]')
@@ -733,16 +819,15 @@ def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=F
     ax2 = grid(ax2, xlab='Time $t$ [s]', ylab='$V(t)$ [arb. un.]')
     if mod_ph or re_im:
         fft = tran.imag if re_im else np.angle(tran)
-        ax2.plot(freq, fft, c='k', lw=0.9)
+        ax2.plot(freq, fft, **FOURIER_LINE)
         ax1.set_xlabel(None)
         ax2.set_xlabel('Frequency $f$ [Hz]')
         ax2.set_ylabel(r'$\widetilde{V}(f)$ Phase [rad]')
         if re_im:
             ax2.set_ylabel('Fourier Transform [Im]')
     else:
-        xmes, dx, ymes, dy = signal
-        ax2.errorbar(xmes, ymes, dy, dx, 'ko', ms=1.2, elinewidth=0.8,
-                     capsize=1.1, ls='', lw=0.7, label='data', zorder=5)
+        xmes, ymes, dx, dy = signal
+        ax2.errorbar(xmes, ymes, dy, dx, **FOURIER_MARKER)
     if signal:
         ax1, ax2 = ax2, ax1
     return fig, (ax1, ax2)
@@ -838,14 +923,15 @@ def std_unc(measure, ADC=None):
     unc = np.diff(V)/2/np.sqrt(12)
     return np.append(unc, np.mean(unc))
 
-def synth_data(model, domain, pars=None, wnoise=None, npts=100):
+def synth_data(model, domain, pars=None, noise=None, npts=100):
     """ Creates noisy data arrays of npts points shaped like model(domain). """
     if len(domain) == 2:
         domain = np.linspace(start=domain[0], stop=domain[1], num=npts)
-    if wnoise is None:
-        wnoise = [0, 1]
+    if noise is None:
+        noise = [0, 1]
     ideal = model(domain, *pars) if pars is not None else model(domain)
-    noise = np.random.normal(loc=wnoise[0], scale=wnoise[1], size=domain.shape)
+    if len(noise) == 2:
+        noise = np.random.normal(loc=noise[0], scale=noise[1], size=domain.shape)
     return ideal + noise, domain
 
 def interleave(a, b):
