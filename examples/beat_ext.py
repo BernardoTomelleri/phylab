@@ -30,7 +30,6 @@ ax1.plot(t_a, x_a, 'gray', alpha=0.6); ax2.plot(t_b, x_b, 'gray', alpha=0.6)
 
 t_a, x_a, t_b, x_b = lab.mesrange(t_a, x_a, t_b, x_b, t_min, t_max)
 ax1.plot(t_a, x_a, 'k'); ax2.plot(t_b, x_b, 'k')
-fig.tight_layout()
 
 # Prep before fitting pendulums
 dt = np.full(t_a.shape, 2e-5); dx = 2*np.ones_like(x_a)
@@ -62,19 +61,14 @@ for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
         prnpar(pars, perr, model=beat)
         chisq, ndof, resn, sigma = chitest(beat(timein, *pars), posin, unc=dpin,
                                            ddof=len(pars), gauss=True, v=True)
-        #normout = (posout - beat(timeout, *pars))/dpout
 
         # Graph with outliers
         figout, (axf, axr) = pltfitres(beat, time, pos, dx=dt, dy=deff, pars=pars, in_out=mask)
-        #axf.errorbar(timeout, posout, dpout, dtout, 'gx',  ms=3, elinewidth=1.,
-        #             capsize=1.5, ls='', label='outliers')
         axf.set_ylabel('Position %c [ADC counts]' %('A' if all(time == t_a) else 'B'))
         if tix: lab.tick(axf, xmaj=10, ymaj=50)
         legend = axf.legend(loc='best')
 
         axr.set_xlabel('Time [s]', x=0.94)
-        #axr.errorbar(timeout, normout, None, None, 'gx', elinewidth = 0.7, capsize=0.7,
-        #             ms=3., ls='', zorder=5)
         if tix: lab.tick(axr, xmaj=5, ymaj=2, ymin=0.5)
 
     if fft:
@@ -98,5 +92,4 @@ for time, pos, init in zip([t_a, t_b], [x_a, x_b], [init_a, init_b]):
                                r'\frac{ (\phi_1 + \phi_2)}{2}\right] \cdot \cos\left['
                                r'\pi f_m t_i + \frac{(\phi_1 - \phi_2)}{2}\right] \right\} }'
                                r'{\sigma_{x_i}} \right)^2$', fontsize=12)
-        fig3d.tight_layout()
 plt.show()

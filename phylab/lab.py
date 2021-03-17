@@ -503,7 +503,7 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
         out.res_var : Residual variance or Reduced chi square
         out.delta : array of deviations along x from predicted model
         out.eps : array of deviations along y from predicted model
-        out.iwork[10 or 12] : degrees of freedom of the fit, i.e., the number
+        out.iwork[-15] : degrees of freedom of the fit, i.e., the number
         of observations minus the number of parameters actually estimated
         https://docs.scipy.org/doc/scipy/reference/generated/scipy.odr.Output.html
 
@@ -657,7 +657,7 @@ def grid(ax, which='major', xlab=None, ylab=None):
     ax.grid(which=which, **GRID)
     if xlab is not False:
         ax.set_xlabel('%s' % (xlab if xlab else 'x [arb. un.]'),
-                      x=0.9 - len(xlab)/500. if xlab else None)
+                      x=0.9 - len(xlab)/500. if xlab else 0.5)
     if ylab is not False:
         ax.set_ylabel('%s' % (ylab if ylab else 'y [arb. un.]'))
     ax.minorticks_on()
