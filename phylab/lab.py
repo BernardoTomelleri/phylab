@@ -21,6 +21,7 @@ from scipy import special as sp
 from scipy import stats
 from matplotlib import pyplot as plt
 from matplotlib import dates
+import sympy as sym
 
 # Configuration file import
 from phylab.rc import (
@@ -289,6 +290,13 @@ def fit_test(model, coords, popt, unc=1, v=False):
         #prnpar(pars=ANOVA, perr=np.zeros(len(ANOVA)), manual=ANOVA._fields)
     return ANOVA
 
+def het_cov(A, b, sol, cov):
+    # HC3, Mackinnon and White heteroskedastic-robust covariance estimator
+    res = b - A @ sol
+    leverage = np.diag(A @ (cov @ A.T))
+    cov_het = cov @ ((A.T @ A*(res/(1 - leverage))[:, None]**2) @ cov)
+    return cov_het
+
 def errcor(covm):
     """ Computes parameter error and correlation matrix from covariance. """
     perr = np.sqrt(covm.diagonal())
@@ -348,10 +356,13 @@ def optm(x, y, minm=None, absv=None):
     """ Evaluates minima or maxima (default) of y as a function of x. """
     x = np.asarray(x)
     y = np.abs(y) if absv else np.asarray(y)
-    yopt = np.min(y) if minm else np.max(y)
-    xopt = np.where(y == yopt)[0]
-    xopt = xopt[0]
-    return x[xopt], yopt
+    if minm:
+        yopt = np.min
+        idxopt = np.argmin(y)
+    else:
+        yopt = np.max(y)
+        idxopt = np.argmax(y)
+    return x[idxopt], yopt
 
 def ldec(seq, upb=None):
     """ Checks if sequence is decreasing, starting from an upper bound. """
@@ -575,8 +586,12 @@ def coope(coords, weights=None):
 def crcfit(coords, uncerts=None, p0=None):
     """ Fit circle to a set of coordinates (x_y, y_i) with uncertainties
     (dx_i, dy_i) as weights, using curve_fit with initial parameters p0. """
-    rsq = (coords**2).sum(axis=0)
-    dr = (uncerts**2).sum(axis=0) if uncerts else None
+    coords = np.asarray(coords)
+    rsq = np.sum(coords**2, axis=0)
+    dr = None
+    if uncerts is not None:
+        uncerts = np.asarray(uncerts)
+        dr = np.sum(uncerts**2, axis=0)
 
     popt, pcov = curve_fit(f=coope_circ, xdata=coords, ydata=rsq, sigma=dr, p0=p0)
     # recover original variables from Coope transformation
@@ -600,7 +615,8 @@ def elpfit(coords, uncerts=None):
         b /= uncerts[:, None]
     sol, chisq = np.linalg.lstsq(A, b, rcond=None)[:2]
     if chisq:
-        pcov = np.linalg.pinv(A.T @ A)*chisq/len(b)
+        ndof = len(y) - len(sol)
+        pcov = np.linalg.pinv(A.T @ A)*chisq/ndof
     else:
         print('Warning: covariance of parameters could not be estimated.')
         pcov = None
@@ -649,11 +665,44 @@ def Ell_std2imp(Xc, Yc, a, b, angle):
     F = A*Xc**2 + B*Xc*Yc + C*Yc**2 - (a*b)**2
     return np.array([A, B, C, D, E, F])
 
+def alg_expfit(x, y, dy=None, absolute_sigma=False):
+    """
+    Weighted algebraic fit for general exponential function
+    f(x) = a * exp(b * x) to the data points in arrays xmes and ymes.
+    https://mathworld.wolfram.com/LeastSquaresFittingExponential.html
+    """
+    x, y = np.asarray(x), np.asarray(y)
+    S_x2_y, S_y_lny, S_x_y, S_x_y_lny, S_y = np.zeros(shape=5)
+    if dy is None:
+        dy = np.ones_like(y)
+    elif np.isscalar(dy):
+        dy = np.full(shape=y.shape, fill_value=dy)
+    for xi, yi, dyi in zip(x, y, dy):
+        wi = 1./dyi**2
+        S_x2_y += xi * xi * yi * wi
+        S_y_lny += yi * np.log(yi) * wi
+        S_x_y += xi * yi
+        S_x_y_lny += xi * yi * np.log(yi) * wi
+        S_y += y * wi
+    Det = S_y * S_x2_y - S_x_y ** 2
+    a = (S_x2_y * S_y_lny - S_x_y * S_x_y_lny) / Det
+    b = (S_y * S_x_y_lny - S_x_y * S_y_lny) / Det
+    popt = [np.exp(a), b]
+    # Parameter covariance estimates
+    chisq, ndof, resn = chitest(popt[0]*np.exp(popt[1]*x), y, unc=dy, ddof=len(popt))
+    X = np.columnstack(x/dy.T, 1./dy.T)
+    pcov = np.linalg.pinv(X.T @ X)
+    if absolute_sigma is False:
+         pcov *= chisq/ndof
+    return popt, pcov
+
 # UTILITIES FOR MANAGING FIGURE AXES AND OUTPUT GRAPHS
 def grid(ax, which='major', xlab=None, ylab=None):
-    """ Adds standard grid and labels for measured data plots to ax.
-    Notice: omitting labels results in default x/y [arb. un.]. To leave a
-    label intentionally blank x/y lab must be set to False. """
+    """ 
+    Adds standard grid and labels for measured data plots to ax.
+    Notice: omitting labels results in default x/y [arb. un.]
+    to leave a label intentionally blank x/y lab must be set to False.
+    """
     ax.grid(which=which, **GRID)
     if xlab is not False:
         ax.set_xlabel('%s' % (xlab if xlab else 'x [arb. un.]'),
@@ -725,6 +774,17 @@ def vline_tomax(coords, ax=None, label=None):
 def days_from_epoch(date):
     """ Returns number of days passed since UNIX Epoch. """
     return (date - datetime.datetime(1970, 1, 1)).days
+
+def function_formula(model, var='x', pars=None):
+    x = sym.Symbol(var)
+    argspec = getfullargspec(model)
+    if pars is None:
+        # assume default argument value of model
+        pars = argspec[3]
+    tex = sym.latex(model(x, *pars)).replace('$', '')
+    for val, nam in zip(pars, argspec[0][1:]):
+        tex = tex.replace(f'{val}', nam)
+    return tex
 
 def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=None, date=None):
     """ Produces standard plot of best-fit curve describing measured data

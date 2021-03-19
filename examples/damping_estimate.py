@@ -36,7 +36,11 @@ def tau_fit(signal, time, neighbors=5):
     for idx in range(neighbors, len(signal) - neighbors):
         if signal[idx] == np.max(signal[idx - neighbors : idx + neighbors]) and signal[idx] > ofs:
             peaks.append(idx)
-    popt, pcov = np.polyfit(time[peaks], np.log(signal[peaks] - ofs), deg=1, cov=True)
+    # Note: weighting proportional to y is used to prevent artificial over
+    # sensitivity to small y values in log-space chi square minimization
+    x, y = time[peaks], np.log(signal[peaks] - ofs)
+    popt, pcov = np.polyfit(x, y, deg=1, w=y, cov=True)
+    #popt[1] = np.exp(popt[1])
     return popt, pcov, peaks
 
 if gen:

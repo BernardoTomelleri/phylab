@@ -23,6 +23,17 @@ def elps_dist(coords, Xc=0, Yc=0, a=1, b=1, angle=0):
     A, B, C, D, E, F = lab.Ell_std2imp(Xc, Yc, a, b, angle)
     return A*x**2 + B*x*y + C*y**2 + D*x + E*y + F
 
+def test_circle_fit():
+    """
+    This test was extracted from the paper: "Least-Squares Circle" Fit
+    by Randy Bullock. It test the correctness of the fit.
+    """
+    x = np.array([0.000, 0.500, 1.000, 1.500, 2.000, 2.500, 3.000])
+    y = np.array([0.000, 0.250, 1.000, 2.250, 4.000, 6.250, 9.000])
+    coords = np.array([x, y])
+    (xc, yc), r = lab.coope(coords)
+    assert xc + 11.839 < 0.001 and yc - 8.4464 < 0.0001 and r - 14.686 < 0.001
+
 if gen:
     data = np.asarray(Ell_coords(*init, step=npts))
     noise = np.random.normal(loc=0, scale=0.1*init[2], size=data.shape)
