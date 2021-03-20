@@ -32,7 +32,7 @@ Because this was written by someone starting to learn about experimental Physics
 and Python (for students in a similar situation) all the functions in this module
 try to use only the basic data structures and functionalities found in Python
 that are briefly discussed with students (functions, arrays & not much else).
-This is why you won't find classes, methods or even dicts in this library
+This is why you won't find classes, methods or even dicts in this package
 and why the code inside may be very, very inefficient/ugly.
 On the upside though, all the definitions inside should be easily comprehensible
 and modifiable by anyone just starting out with programming.
@@ -49,16 +49,16 @@ release it for any and all students that may find it helpful for dealing
 with similar problems.
 
 ## Contents
-- The main module containing all the functions. [lab](/phylab/lab.py)
-- A simple showcase of a couple of things this library allows you to do. [circfit](/phylab/circfit.py)
+- The main module containing all the functions. [lab]
+- A simple showcase of a couple of things this library allows you to do. [circfit]
   - Finding the best-fitting circle and ellipse for simulated or real sampled data points.
   - A quick comparison between using `curve_fit`, an algebraic circle fit
    (weighted [Coope] method) and an algebraic ellipse fit.
   - Plotting the $\chi^2(a, b)$ surface for a pair of parameters $a, b$ of the circle or the ellipse.
-- Folder containing further examples and data that can be used in the demos. [examples](/examples)
+- Folder containing further examples and data that can be used in the demos. [examples]
 
 For another example of where this package can come in handy feel free to check
-out [FFT] and [Lock-in detector]. A small paper (in italiano) on fitting,
+out [FFT repository] and [Lock-in detector]. A small paper (in italiano) on fitting,
 computing Fourier transforms and/or simulating the effect of a Lock-in detector
 on real sampled signals or internally generated ones.
 
@@ -84,7 +84,7 @@ Weighted algebraic fits (like [ellipse fit] and others).
 
 ### Fourier transform utilities
 Functions for computing FFTs of real and complex signals and other
-associated quantities ([FFT], [sampling], [FWHM]), applying window functions
+associated quantities ([sampling], [FFT], [FWHM]), applying window functions
 and displaying their output through Matplotlib ([plotfft]).
 
 ### data plotting
@@ -129,12 +129,11 @@ manually and import the main module directly inside your script just as before.
 
 ## Using Phy lab
 For a quick guide on how to use this library and to show just how much of a difference
-using these few functions can have, compare [beat](/examples/beat.py) and
-[beat_naive](/examples/beat_naive.py).
+using these few functions can have, compare [beat] and [beat_naive].
 These two scripts do the same thing, but the first one is three times shorter
 at 50 lines, runs ~ 0.2 seconds (30%) faster using less memory and can be
 easily extended to work with more than 2 datasets, remove outliers,
-compute FFT and so on... As you can see for example in [beat_ext](/phylab/beat_ext.py).
+compute FFT and so on... As you can see for example in [beat_ext].
 
 ## Development
 Any and all suggestions are always appreciated, If you want to contribute
@@ -150,28 +149,34 @@ Phy lab is licensed under the GNU General Public License v3.0 or later.
 stripped out by the markdown processor.
 See - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
-   [FFT]: <https://github.com/BernardoTomelleri/FFT/blob/master/fft_plot.py>
+   [lab]: <https://github.com/BernardoTomelleri/phylab/blob/master/phylab/lab.py>
+   [circfit]: <https://github.com/BernardoTomelleri/phylab/blob/master/examples/circfit.py>
+   [examples]: <https://github.com/BernardoTomelleri/phylab/tree/master/examples>
+   [FFT repository]: <https://github.com/BernardoTomelleri/FFT>
    [Lock-in detector]: <https://github.com/BernardoTomelleri/FFT/blob/master/lockin.py>
-   [coope]: <https://ir.canterbury.ac.nz/bitstream/handle/10092/11104/coope_report_no69_1992.pdf?sequence=1&isAllowed=y>
-   [dampened oscillator]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L28>
-   [square wave]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L36>
-   [Butterworth]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L69>
-   [chi-square test]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L99>
-   [errcor]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L147>
-   [print correlations]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L156>
-   [print parameters]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L163>
-   [propagated fit]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L244>
-   [ellipse fit]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L380>
-   [FFT]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L431>
-   [sampling]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L512>
-   [FWHM]: <https://github.com/BernardoTomelleri/phylab/blob/b03e131d2007a1ebe2d100dcd2d2d0f3de764fe3/phylab.py#L201>
-   [plotfft]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L468>
-   [grid]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L206>
-   [plot fit &  residuals]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L405>
-   [measured range]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L506>
-   [file loop]: <https://github.com/BernardoTomelleri/phylab/blob/66c6b772e1d3ea614c796b8c146bf99b1f1540c5/lab.py#L533>
+   [Coope]: <https://ir.canterbury.ac.nz/bitstream/handle/10092/11104/coope_report_no69_1992.pdf?sequence=1&isAllowed=y>
+   [dampened oscillator]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L58>
+   [square wave]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L66>
+   [Butterworth]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L131>
+   [chi-square test]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L161>
+   [errcor]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L292>
+   [print correlations]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L301>
+   [print parameters]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L308>
+   [propagated fit]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L381>
+   [ODRPACK]: <https://docs.scipy.org/doc/external/odrpack_guide.pdf>
+   [scipy.optimize.curve_fit]: <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html>
+   [ellipse fit]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L589>
+   [sampling]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L836>
+   [FFT]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L851>
+   [FWHM]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L336>
+   [plotfft]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L801>
+   [grid]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L653>
+   [plot fit &  residuals]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L729>
+   [measured range]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L902>
+   [file loop]: <https://github.com/BernardoTomelleri/phylab/blob/1a4a86d121a1c07b91af5dfc7ec03443b1939035/phylab/lab.py#L943>
    [SciPy]: <https://www.scipy.org/scipylib/index.html>   
    [NumPy]: <https://numpy.org/>
    [Matplotlib]: <https://matplotlib.org/stable/index.html>
-   [ODRPACK]: <https://docs.scipy.org/doc/external/odrpack_guide.pdf>
-   [scipy.optimize.curve_fit]: <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html>
+   [beat]: <https://github.com/BernardoTomelleri/phylab/blob/master/examples/beat.py>
+   [beat_naive]: <https://github.com/BernardoTomelleri/phylab/blob/master/examples/beat_naive.py>
+   [beat_ext]: <https://github.com/BernardoTomelleri/phylab/blob/master/examples/beat_ext.py>
