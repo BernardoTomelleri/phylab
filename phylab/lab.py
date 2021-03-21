@@ -82,8 +82,10 @@ def parabola(x_range, A, T, phs=0, ofs=0):
     return y
 
 def coope_circ(coords, Xc=0, Yc=0, Rc=1):
-    """ function of circle pars to be minimized by Coope fit algorithm.
-    This is not meant to be used directly. """
+    """
+    Function of circle pars to be minimized by Coope fit algorithm.
+    This is not meant to be used directly.
+    """
     x, y = coords
     return Xc*x + Yc*y + Rc
 
@@ -159,8 +161,11 @@ def butf(signal, order, fc, ftype='lp', sampf=None):
 # Some functions share a variable v, verbose mode. Activates various print
 # statements about variables contained inside the function.
 def chitest(prediction, data, unc=1., ddof=0, gauss=False, v=False):
-    """ Evaluates Chi-square goodness of fit test for a function, model, to
-    a set of data. """
+    """
+    Evaluates Chi-square goodness of fit test for a function, model, to
+    a set of data.
+    
+    """
     resn = (data - prediction)/unc
     ndof = len(data) - ddof
     chisq = (resn**2).sum()
@@ -248,8 +253,8 @@ def adjusted_R(model, coords, popt, unc=1):
     R = R_squared(y, model(x, *popt), uncertainty=unc)
     n, p = len(y), len(popt)
     coefficient = (n - 1)/(n - p - 1)
-    adj = 1 - (R - 1.) * coefficient
-    return 1. + adj, R
+    adj = 1 - (1 - R) * coefficient
+    return adj, R
 
 def Ftest(model, coords, popt, unc=1):
     """
@@ -311,7 +316,10 @@ def fit_test(model, coords, popt, unc=1, v=False):
     return ANOVA
 
 def het_cov(A, b, sol, cov):
-    # HC3, Mackinnon and White heteroscedastic-robust covariance estimator
+    """
+    HC3, Mackinnon and White heteroscedastic-robust covariance estimator.
+    
+    """
     res = b - A @ sol
     leverage = np.diag(A @ (cov @ A.T))
     cov_het = cov @ ((A.T @ A*(res/(1 - leverage))[:, None]**2) @ cov)
@@ -356,7 +364,10 @@ def RMSE(seq, exp=None):
     return np.sqrt(np.mean(np.square(seq - exp)))
 
 def abs_devs(seq, around=None):
-    """ Evaluates absolute deviations around a central value or expected data sequence."""
+    """ Evaluates absolute deviations around a central value or expected
+    data sequence.
+    
+    """
     if around is not None:
         return np.abs(seq - around)
     return np.abs(seq - np.median(seq))
@@ -437,16 +448,15 @@ def stdevs2ci(dist=stats.norm, sigmas=1, args=None):
         return 1 - 2*dist.sf(sigmas, *args)
     return 1 - 2*dist.sf(sigmas)
 
-def popt_conf(data, pars, perr, ci=0.95):
+def conf_popt(data, pars, perr, ci=0.95):
     """
-    Evaluates ci confidence intervals of estimated fit parameters pars with
-    associated uncertainty/standard deviation perr.
+    Evaluates ci confidence interval sizes of estimated fit parameters
+    around their central values pars with associated uncertainties perr.
     
     """
     alpha = 1 - ci
     t = stats.t.pdf(1 - alpha/2, df=len(data) - len(pars))
-    intervals = [pars - t * perr, pars + t * perr]
-    return intervals
+    return t * perr
 
 # LEAST SQUARE FITTING ROUTINES
 # Scipy.curve_fit with horizontal error propagation
@@ -590,8 +600,11 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
     return popt, pcov, out
 
 def gen_init(model, coords, bounds, unc=1):
-    """ Differential evolution algorithm to guess valid initial parameter
-    values within bounds in order to fit model to coords. """
+    """
+    Differential evolution algorithm to guess valid initial parameter values
+    within bounds in order to fit model to coords.
+    
+    """
     if bounds is None:
         bounds = []
         for i in len(getfullargspec(model)[0] - 1):
@@ -602,8 +615,11 @@ def gen_init(model, coords, bounds, unc=1):
     return result.x
 
 def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, mask=False):
-    """ Removes outliers from measured data. A sampled point is considered an
-    outlier if it has absolute deviation y - model(x, *pars) > thr*dy. """
+    """
+    Removes outliers from measured data. A sampled point is considered an
+    outlier if it has absolute deviation y - model(x, *pars) > thr*dy.
+    
+    """
     if dx is None:
         dx = np.ones_like(xmes)
     if dy is None:
@@ -619,18 +635,24 @@ def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, mask=False):
     return xmes[isin], ymes[isin], dx[isin], dy[isin]
 
 def medianout(data, thr=2.):
-    """ Filters outliers based on median absolute deviation (MAD) around the
-    median of measured data. """
+    """
+    Filters outliers based on median absolute deviation (MAD) around the
+    median of measured data.
+    
+    """
     devs = abs_devs(data)
     n_sigmas = devs/np.median(devs)
     return data[n_sigmas < thr]
 
 # Circular and elliptical fit functions
 def coope(coords, weights=None):
-    """ Attempts to find best fitting circle to array of given coordinates
+    """
+    Attempts to find best fitting circle to array of given coordinates
     (x_i, y_i) prioritizing certain points with weights.
     Returns best-fit center coordinates [x_center, y_center] and radius.
-    Adapted from https://ir.canterbury.ac.nz/handle/10092/11104 """
+    Adapted from https://ir.canterbury.ac.nz/handle/10092/11104
+    
+    """
     npts = len(coords[0]); coords = np.asarray(coords)
     if weights is None:
         weights = np.ones(shape=npts)
@@ -645,8 +667,11 @@ def coope(coords, weights=None):
     return center, radius
 
 def crcfit(coords, uncerts=None, p0=None):
-    """ Fit circle to a set of coordinates (x_y, y_i) with uncertainties
-    (dx_i, dy_i) as weights, using curve_fit with initial parameters p0. """
+    """
+    Fit circle to a set of coordinates (x_y, y_i) with uncertainties
+    (dx_i, dy_i) as weights, using curve_fit with initial parameters p0.
+    
+    """
     coords = np.asarray(coords)
     rsq = np.sum(coords**2, axis=0)
     dr = None
@@ -663,10 +688,13 @@ def crcfit(coords, uncerts=None, p0=None):
     return popt, pcov
 
 def elpfit(coords, uncerts=None):
-    """ Fit ellipse to a set of coordinates (x_y, y_i) with uncertainties
+    """
+    Fit ellipse to a set of coordinates (x_y, y_i) with uncertainties
     (dx_i, dy_i) as weights, using NumPy's least square linear algebra solver.
     Returns best fit ellipse parameters as array sol, sum of square residuals
-    chisq and estimated parameter covariance pcov. """
+    chisq and estimated parameter covariance pcov.
+    
+    """
     x, y = coords
     x = np.atleast_2d(x).T; y = np.atleast_2d(y).T
     A = np.column_stack([x**2, x*y, y**2, x, y])
@@ -684,10 +712,13 @@ def elpfit(coords, uncerts=None):
     return sol, chisq, pcov
 
 def Ell_coords(Xc, Yc, a, b=None, angle=None, arc=1, N=1000):
-    """ Creates N pairs of linearly spaced (x, y) coordinates along an ellipse
+    """
+    Creates N pairs of linearly spaced (x, y) coordinates along an ellipse
     with center coordinates (Xc, Yc); major and minor semiaxes a, b and inclination
     angle (counter-clockwise) between x-axis and major axis. Can create arcs
-    of circles by limiting eccentric anomaly between 0 <= t <= arc*2*pi. """
+    of circles by limiting eccentric anomaly between 0 <= t <= arc*2*pi.
+    
+    """
     if not b:
         b = a
     elif b > a:
@@ -731,6 +762,7 @@ def alg_expfit(x, y, dy=None, absolute_sigma=False):
     Weighted algebraic fit for general exponential function
     f(x) = a * exp(b * x) to the data points in arrays xmes and ymes.
     https://mathworld.wolfram.com/LeastSquaresFittingExponential.html
+    
     """
     x, y = np.asarray(x), np.asarray(y)
     S_x2_y, S_y_lny, S_x_y, S_x_y_lny, S_y = np.zeros(shape=5)
@@ -763,6 +795,7 @@ def grid(ax, which='major', xlab=None, ylab=None):
     Adds standard grid and labels for measured data plots to ax.
     Notice: omitting labels results in default x/y [arb. un.]
     to leave a label intentionally blank x/y lab must be set to False.
+    
     """
     ax.grid(which=which, **GRID)
     if xlab is not False:
@@ -840,6 +873,7 @@ def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     """
     Plots confidence bands for predicted model within nstd standard deviations
     from optimal parameters pars. Colors in bounded region if fill is True.
+    
     """
     space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)
     pred_up = model(space, *(pars + nstd * perr))
@@ -852,8 +886,11 @@ def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     return line_up, line_lo 
     
 def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=None, date=None):
-    """ Produces standard plot of best-fit curve describing measured data
-    with residuals underneath. """
+    """
+    Produces standard plot of best-fit curve describing measured data
+    with residuals underneath.
+    
+    """
     if axs is None:
         fig, (ax1, ax2) = plt.subplots(**PLOT_FIT_RESIDUALS)
     else:
@@ -899,8 +936,11 @@ def plot3d(x, y, z, xlab=None, ylab=None, zlab=None):
     return fig, ax
 
 def hist_normfit(data, ax=None, log=False):
-    """ Maximum (log) Likelihood Estimation fit for normal/gaussian
-    distribution of histogram data. """
+    """
+    Maximum (log) Likelihood Estimation fit for normal/gaussian distribution
+    of histogram data.
+    
+    """
     pars = stats.norm.fit(data)
     mean, sigma = pars
     prnpar(pars, model=gaussian)
@@ -924,8 +964,11 @@ def hist_normfit(data, ax=None, log=False):
     return pars
 
 def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=False):
-    """ Plot Fourier transform tran over frequency space freq by itself or
-    under its generating signal. """
+    """
+    Plot Fourier transform tran over frequency space freq by itself or
+    under its generating signal.
+    
+    """
     fft = tran.real if re_im else np.abs(tran)
     if norm:
         fft /= np.max(fft)
@@ -1017,9 +1060,12 @@ def FFT(time, signal, window=None, beta=0, specres=None):
 
 # UTILITIES FOR MANAGING DATA AND FILES
 def srange(data, x, x_min=0, x_max=1e9):
-    """ Returns sub-array containing data inside selected range over
-        dynamic variable x in [x_min, x_max]. If x is equal to data,
-        srange acts as a clamp for the data array"""
+    """ 
+    Returns sub-array containing data inside selected range over dynamic
+    variable x in [x_min, x_max]. If x is equal to data, srange acts as a
+    clamp for the data array.
+    
+    """
     xup = x[x > x_min]; dup = data[x > x_min]
     sdata = dup[xup < x_max]
     return sdata
@@ -1036,8 +1082,11 @@ def mesrange(x, y, dx=None, dy=None, x_min=0, x_max=1e9):
     return sx, sy, sdx, sdy
 
 def uncert(cval, gain=0, read=0):
-    """ Associates uncertainty of measurement to a central value, assuming
-    gain/scale and reading error are independent. """
+    """
+    Associates uncertainty of measurement to a central value, assuming
+    gain/scale and reading error are independent.
+    
+    """
     return np.sqrt((cval*gain)**2 + read**2)
 
 def std_unc(measure, ADC=None):
