@@ -452,10 +452,11 @@ def conf_popt(data, pars, perr, ci=0.95):
     """
     Evaluates ci confidence interval sizes of estimated fit parameters
     around their central values pars with associated uncertainties perr.
+    Default confidence probability is 95% ~ 1.96 standard deviations.
     
     """
     alpha = 1 - ci
-    t = stats.t.pdf(1 - alpha/2, df=len(data) - len(pars))
+    t = stats.t.ppf(1 - alpha/2., df=len(data) - len(pars))
     return t * perr
 
 # LEAST SQUARE FITTING ROUTINES
