@@ -21,7 +21,6 @@ from scipy import special as sp
 from scipy import stats
 from matplotlib import pyplot as plt
 from matplotlib import dates
-import sympy as sym
 
 # Configuration file import
 from phylab.rc import (
@@ -220,9 +219,12 @@ def chisq(model, x, y, alpha, beta, varnames, pars=None, dy=None):
     return np.array([[(((y - fxmodel(a, b))/dy)**2).sum() for a in alpha] for b in beta])
 
 def residual_squares(pars, model, coords, unc=1):
-    """ Sum of squared errors as a function of pars to be minimized by
+    """
+    Sum of squared errors as a function of pars to be minimized by
     differential evolution algorithm. This cannot follow standard
-    argument order, therefore is not meant to be used directly. """
+    argument order, therefore is not meant to be used directly.
+    
+    """
     x, y = coords
     exval = model(x, *pars)
     return np.sum(((y - exval)/unc) ** 2)
@@ -233,14 +235,27 @@ def R_squared(observed, predicted, uncertainty=1):
     return 1. - (np.var((observed - predicted)*weight) / np.var(observed*weight))
 
 def adjusted_R(model, coords, popt, unc=1):
-    """ Returns adjusted R square test for optimal parameters popt. """
+    """
+    Returns adjusted R squared test for optimal parameters popt calculated 
+    according to W-MN formula, other forms have different coefficients:
+    Wherry/McNemar : (n - 1)/(n - p - 1)
+    Wherry : (n - 1)/(n - p)
+    Lord : (n + p - 1)/(n - p - 1)
+    Stein : (n - 1)/(n - p - 1) * (n - 2)/(n - p - 2) * (n + 1)/n
+        
+    """
     x, y = coords
     R = R_squared(y, model(x, *popt), uncertainty=unc)
-    adj = (R - 1.) / (1 - len(popt)/len(y))
+    n, p = len(y), len(popt)
+    coefficient = (n - 1)/(n - p - 1)
+    adj = 1 - (R - 1.) * coefficient
     return 1. + adj, R
 
 def Ftest(model, coords, popt, unc=1):
-    """ Fisher test for variance of fitted vs constant model. """
+    """
+    One tailed Fisher test for variance of fitted vs constant model.
+    
+    """
     x, y = coords
     SSE = residual_squares(popt, model, coords, unc=unc)
     chired = SSE / (len(y) - len(popt))
@@ -248,8 +263,11 @@ def Ftest(model, coords, popt, unc=1):
     return SSM/len(popt) / chired
 
 def t_test(pars, perr):
-    """ Returns (one-sided) t-statistic values and probabilities for
-    fit parameters with standard deviation perr. """
+    """
+    Returns (one-sided) t-statistic values and probabilities for fit
+    parameters with standard deviation perr.
+    
+    """
     t_vals = pars/perr
     p_vals = stats.t.sf(np.abs(t_vals), df=len(pars))
     return t_vals, p_vals
@@ -281,9 +299,11 @@ def fit_test(model, coords, popt, unc=1, v=False):
     chisq, ndof, resn = chitest(model(x, *popt), y, unc=unc, ddof=ddof)
     chi_pval = stats.chi2.sf(chisq, ndof)
     adj_R, R = adjusted_R(model, coords, popt)
+    
     SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
     F = SSM/ddof / (chisq/ndof)
     F_pval = stats.f.sf(F, ddof, ndof)
+    
     ANOVA = goodness(chisq, ndof, chi_pval, R, adj_R, F, F_pval)
     if v:
         print(ANOVA)
@@ -291,7 +311,7 @@ def fit_test(model, coords, popt, unc=1, v=False):
     return ANOVA
 
 def het_cov(A, b, sol, cov):
-    # HC3, Mackinnon and White heteroskedastic-robust covariance estimator
+    # HC3, Mackinnon and White heteroscedastic-robust covariance estimator
     res = b - A @ sol
     leverage = np.diag(A @ (cov @ A.T))
     cov_het = cov @ ((A.T @ A*(res/(1 - leverage))[:, None]**2) @ cov)
@@ -381,11 +401,52 @@ def is_symmetric(a, tol=1e-8):
     return np.all(np.abs(a - a.T) < tol)
 
 def valid_cov(covm):
-    """ Checks whether covm is a valid covariance matrix. That is: finite,
-    symmetric and not zero on its diagonal."""
+    """
+    Checks whether covm is a valid covariance matrix. That is: finite,
+    symmetric and not zero on its diagonal.
+    """
     if np.isfinite(covm).all() and covm.diagonal().all() != 0. and is_symmetric(covm):
         return True
     return False
+
+def ci2stdevs(dist=stats.norm, ci=0.95, args=None):
+    """
+    Converts confidence interval to corresponding number of deviations of
+    a standard normal distribution (mean = 0, stdev = 1).
+    
+    """
+    # Conversion to (per)centile point of distribution i.e. percentage
+    # of area under the curve up to the right limit of confidence interval.
+    pp = (1. + ci) / 2.
+    # Percentile point function returns the value of x that contains
+    # pp% of the area under normal curve, where CDF(x) = pp
+    if args is not None:
+        nstd = dist.ppf(pp, *args)
+    else:
+        nstd = dist.ppf(pp)
+    assert nstd == dist.interval(ci)[-1]
+    return nstd
+
+def stdevs2ci(dist=stats.norm, sigmas=1, args=None):
+    """
+    Returns confidence interval/level i.e. area under standard normal
+    distribution within n standard deviations/sigmas from the mean.
+    
+    """
+    if args is not None:
+        return 1 - 2*dist.sf(sigmas, *args)
+    return 1 - 2*dist.sf(sigmas)
+
+def popt_conf(data, pars, perr, ci=0.95):
+    """
+    Evaluates ci confidence intervals of estimated fit parameters pars with
+    associated uncertainty/standard deviation perr.
+    
+    """
+    alpha = 1 - ci
+    t = stats.t.pdf(1 - alpha/2, df=len(data) - len(pars))
+    intervals = [pars - t * perr, pars + t * perr]
+    return intervals
 
 # LEAST SQUARE FITTING ROUTINES
 # Scipy.curve_fit with horizontal error propagation
@@ -775,17 +836,21 @@ def days_from_epoch(date):
     """ Returns number of days passed since UNIX Epoch. """
     return (date - datetime.datetime(1970, 1, 1)).days
 
-def function_formula(model, var='x', pars=None):
-    x = sym.Symbol(var)
-    argspec = getfullargspec(model)
-    if pars is None:
-        # assume default argument value of model
-        pars = argspec[3]
-    tex = sym.latex(model(x, *pars)).replace('$', '')
-    for val, nam in zip(pars, argspec[0][1:]):
-        tex = tex.replace(f'{val}', nam)
-    return tex
-
+def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
+    """
+    Plots confidence bands for predicted model within nstd standard deviations
+    from optimal parameters pars. Colors in bounded region if fill is True.
+    """
+    space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)
+    pred_up = model(space, *(pars + nstd * perr))
+    pred_lo = model(space, *(pars - nstd * perr))
+    line_up = ax.plot(space, pred_up, ls='--')
+    color = line_up[0].get_color()
+    line_lo = ax.plot(space, pred_lo, ls='--', c=color)
+    if fill:
+        ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.2)
+    return line_up, line_lo 
+    
 def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=None, date=None):
     """ Produces standard plot of best-fit curve describing measured data
     with residuals underneath. """

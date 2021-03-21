@@ -6,7 +6,7 @@ Phylab configuration file
 
 @author: berni
 """
-from matplotlib import cm
+from matplotlib import cm, rcParams
 
 # Errorbar and Line2D properties for plots in order of appearance in lab
 GRID = {
@@ -132,6 +132,23 @@ FOURIER_MARKER = {
     'linewidth' : 0.7,
     'label' : 'data'
 }
+
+def tex_config(usetex=True, preamble=True, fontsize=12):
+    """
+    Sets up LaTeX typesetting for matplotlib output graphs.
+    Requires a functioning LaTeX installation on your machine.
+    """
+    rcParams['text.usetex'] = usetex
+    if preamble:
+        rcParams['text.latex.preamble'] = [
+            r'''
+            \usepackage{amsmath}
+            \usepackage{siunitx}
+            '''
+        ]
+    rcParams['font.family'] = 'serif'
+    rcParams['font.size'] = fontsize
+    #rcParams['font.serif'] = 'Computer Modern'
 
 """
 Notes
