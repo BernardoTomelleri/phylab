@@ -882,9 +882,9 @@ def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)
     pred_up = model(space, *(pars + nstd * perr))
     pred_lo = model(space, *(pars - nstd * perr))
-    line_up = ax.plot(space, pred_up, ls='--')
+    line_up = ax.plot(space, pred_up, **DASHED_LINE)
     color = line_up[0].get_color()
-    line_lo = ax.plot(space, pred_lo, ls='--', c=color)
+    line_lo = ax.plot(space, pred_lo, c=color, **DASHED_LINE)
     if fill:
         ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.2)
     return line_up, line_lo

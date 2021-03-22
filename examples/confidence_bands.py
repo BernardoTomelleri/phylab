@@ -51,7 +51,7 @@ axr.set_xlabel('x [digit]', x=0.9)
 if proper:
     upb, lob = confidence_band(x, [1, x], lin(x, *popt), pcov, ci=0.683)
     axf.plot(x, upb, c='r', ls='--', lw=0.8,
-             zorder=10, alpha=0.7, label=r'95 \% confidence band')
+             zorder=10, alpha=0.7, label=r'68.3 \% confidence band')
     axf.plot(x, lob, c='r', ls='--', lw=0.8,
              zorder=10, alpha=0.7)
 legend = axf.legend(loc='best')

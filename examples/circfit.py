@@ -10,7 +10,7 @@ import phylab as lab
 ''' Variables that control the script '''
 gen = False # generate measured points around circumference
 con = False # show confidence interval for circle fit
-tex = True # LaTeX typesetting maths and descriptions
+tex = False # LaTeX typesetting maths and descriptions
 # (center coordinates x, y, radius or major semiaxis, minor semiaxis, tilt /x)
 init = (1, 2, 3, None, None, 1); npts = 50
 
