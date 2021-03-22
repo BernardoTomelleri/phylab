@@ -164,7 +164,7 @@ def chitest(prediction, data, unc=1., ddof=0, gauss=False, v=False):
     """
     Evaluates Chi-square goodness of fit test for a function, model, to
     a set of data.
-    
+
     """
     resn = (data - prediction)/unc
     ndof = len(data) - ddof
@@ -228,7 +228,7 @@ def residual_squares(pars, model, coords, unc=1):
     Sum of squared errors as a function of pars to be minimized by
     differential evolution algorithm. This cannot follow standard
     argument order, therefore is not meant to be used directly.
-    
+
     """
     x, y = coords
     exval = model(x, *pars)
@@ -241,13 +241,13 @@ def R_squared(observed, predicted, uncertainty=1):
 
 def adjusted_R(model, coords, popt, unc=1):
     """
-    Returns adjusted R squared test for optimal parameters popt calculated 
+    Returns adjusted R squared test for optimal parameters popt calculated
     according to W-MN formula, other forms have different coefficients:
     Wherry/McNemar : (n - 1)/(n - p - 1)
     Wherry : (n - 1)/(n - p)
     Lord : (n + p - 1)/(n - p - 1)
     Stein : (n - 1)/(n - p - 1) * (n - 2)/(n - p - 2) * (n + 1)/n
-        
+
     """
     x, y = coords
     R = R_squared(y, model(x, *popt), uncertainty=unc)
@@ -259,7 +259,7 @@ def adjusted_R(model, coords, popt, unc=1):
 def Ftest(model, coords, popt, unc=1):
     """
     One tailed Fisher test for variance of fitted vs constant model.
-    
+
     """
     x, y = coords
     SSE = residual_squares(popt, model, coords, unc=unc)
@@ -271,7 +271,7 @@ def t_test(pars, perr):
     """
     Returns (one-sided) t-statistic values and probabilities for fit
     parameters with standard deviation perr.
-    
+
     """
     t_vals = pars/perr
     p_vals = stats.t.sf(np.abs(t_vals), df=len(pars))
@@ -304,11 +304,11 @@ def fit_test(model, coords, popt, unc=1, v=False):
     chisq, ndof, resn = chitest(model(x, *popt), y, unc=unc, ddof=ddof)
     chi_pval = stats.chi2.sf(chisq, ndof)
     adj_R, R = adjusted_R(model, coords, popt)
-    
+
     SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
     F = SSM/ddof / (chisq/ndof)
     F_pval = stats.f.sf(F, ddof, ndof)
-    
+
     ANOVA = goodness(chisq, ndof, chi_pval, R, adj_R, F, F_pval)
     if v:
         print(ANOVA)
@@ -318,7 +318,7 @@ def fit_test(model, coords, popt, unc=1, v=False):
 def het_cov(A, b, sol, cov):
     """
     HC3, Mackinnon and White heteroscedastic-robust covariance estimator.
-    
+
     """
     res = b - A @ sol
     leverage = np.diag(A @ (cov @ A.T))
@@ -366,7 +366,7 @@ def RMSE(seq, exp=None):
 def abs_devs(seq, around=None):
     """ Evaluates absolute deviations around a central value or expected
     data sequence.
-    
+
     """
     if around is not None:
         return np.abs(seq - around)
@@ -424,7 +424,7 @@ def ci2stdevs(dist=stats.norm, ci=0.95, args=None):
     """
     Converts confidence interval to corresponding number of deviations of
     a standard normal distribution (mean = 0, stdev = 1).
-    
+
     """
     # Conversion to (per)centile point of distribution i.e. percentage
     # of area under the curve up to the right limit of confidence interval.
@@ -442,7 +442,7 @@ def stdevs2ci(dist=stats.norm, sigmas=1, args=None):
     """
     Returns confidence interval/level i.e. area under standard normal
     distribution within n standard deviations/sigmas from the mean.
-    
+
     """
     if args is not None:
         return 1 - 2*dist.sf(sigmas, *args)
@@ -453,7 +453,7 @@ def conf_popt(data, pars, perr, ci=0.95):
     Evaluates ci confidence interval sizes of estimated fit parameters
     around their central values pars with associated uncertainties perr.
     Default confidence probability is 95% ~ 1.96 standard deviations.
-    
+
     """
     alpha = 1 - ci
     t = stats.t.ppf(1 - alpha/2., df=len(data) - len(pars))
@@ -604,7 +604,7 @@ def gen_init(model, coords, bounds, unc=1):
     """
     Differential evolution algorithm to guess valid initial parameter values
     within bounds in order to fit model to coords.
-    
+
     """
     if bounds is None:
         bounds = []
@@ -619,7 +619,7 @@ def outlier(model, xmes, ymes, dx=None, dy=None, pars=None, thr=5, mask=False):
     """
     Removes outliers from measured data. A sampled point is considered an
     outlier if it has absolute deviation y - model(x, *pars) > thr*dy.
-    
+
     """
     if dx is None:
         dx = np.ones_like(xmes)
@@ -639,7 +639,7 @@ def medianout(data, thr=2.):
     """
     Filters outliers based on median absolute deviation (MAD) around the
     median of measured data.
-    
+
     """
     devs = abs_devs(data)
     n_sigmas = devs/np.median(devs)
@@ -652,7 +652,7 @@ def coope(coords, weights=None):
     (x_i, y_i) prioritizing certain points with weights.
     Returns best-fit center coordinates [x_center, y_center] and radius.
     Adapted from https://ir.canterbury.ac.nz/handle/10092/11104
-    
+
     """
     npts = len(coords[0]); coords = np.asarray(coords)
     if weights is None:
@@ -671,7 +671,7 @@ def crcfit(coords, uncerts=None, p0=None):
     """
     Fit circle to a set of coordinates (x_y, y_i) with uncertainties
     (dx_i, dy_i) as weights, using curve_fit with initial parameters p0.
-    
+
     """
     coords = np.asarray(coords)
     rsq = np.sum(coords**2, axis=0)
@@ -694,7 +694,7 @@ def elpfit(coords, uncerts=None):
     (dx_i, dy_i) as weights, using NumPy's least square linear algebra solver.
     Returns best fit ellipse parameters as array sol, sum of square residuals
     chisq and estimated parameter covariance pcov.
-    
+
     """
     x, y = coords
     x = np.atleast_2d(x).T; y = np.atleast_2d(y).T
@@ -718,7 +718,7 @@ def Ell_coords(Xc, Yc, a, b=None, angle=None, arc=1, N=1000):
     with center coordinates (Xc, Yc); major and minor semiaxes a, b and inclination
     angle (counter-clockwise) between x-axis and major axis. Can create arcs
     of circles by limiting eccentric anomaly between 0 <= t <= arc*2*pi.
-    
+
     """
     if not b:
         b = a
@@ -763,7 +763,7 @@ def alg_expfit(x, y, dy=None, absolute_sigma=False):
     Weighted algebraic fit for general exponential function
     f(x) = a * exp(b * x) to the data points in arrays xmes and ymes.
     https://mathworld.wolfram.com/LeastSquaresFittingExponential.html
-    
+
     """
     x, y = np.asarray(x), np.asarray(y)
     S_x2_y, S_y_lny, S_x_y, S_x_y_lny, S_y = np.zeros(shape=5)
@@ -771,20 +771,23 @@ def alg_expfit(x, y, dy=None, absolute_sigma=False):
         dy = np.ones_like(y)
     elif np.isscalar(dy):
         dy = np.full(shape=y.shape, fill_value=dy)
+    
     for xi, yi, dyi in zip(x, y, dy):
         wi = 1./dyi**2
         S_x2_y += xi * xi * yi * wi
         S_y_lny += yi * np.log(yi) * wi
         S_x_y += xi * yi
         S_x_y_lny += xi * yi * np.log(yi) * wi
-        S_y += y * wi
+        S_y += yi * wi
+    
     Det = S_y * S_x2_y - S_x_y ** 2
     a = (S_x2_y * S_y_lny - S_x_y * S_x_y_lny) / Det
     b = (S_y * S_x_y_lny - S_x_y * S_y_lny) / Det
     popt = [np.exp(a), b]
+    
     # Parameter covariance estimates
     chisq, ndof, resn = chitest(popt[0]*np.exp(popt[1]*x), y, unc=dy, ddof=len(popt))
-    X = np.columnstack(x/dy.T, 1./dy.T)
+    X = np.column_stack([x/dy.T, 1./dy.T])
     pcov = np.linalg.pinv(X.T @ X)
     if absolute_sigma is False:
          pcov *= chisq/ndof
@@ -792,11 +795,11 @@ def alg_expfit(x, y, dy=None, absolute_sigma=False):
 
 # UTILITIES FOR MANAGING FIGURE AXES AND OUTPUT GRAPHS
 def grid(ax, which='major', xlab=None, ylab=None):
-    """ 
+    """
     Adds standard grid and labels for measured data plots to ax.
     Notice: omitting labels results in default x/y [arb. un.]
     to leave a label intentionally blank x/y lab must be set to False.
-    
+
     """
     ax.grid(which=which, **GRID)
     if xlab is not False:
@@ -874,7 +877,7 @@ def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     """
     Plots confidence bands for predicted model within nstd standard deviations
     from optimal parameters pars. Colors in bounded region if fill is True.
-    
+
     """
     space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)
     pred_up = model(space, *(pars + nstd * perr))
@@ -884,13 +887,13 @@ def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     line_lo = ax.plot(space, pred_lo, ls='--', c=color)
     if fill:
         ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.2)
-    return line_up, line_lo 
-    
+    return line_up, line_lo
+
 def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=None, date=None):
     """
     Produces standard plot of best-fit curve describing measured data
     with residuals underneath.
-    
+
     """
     if axs is None:
         fig, (ax1, ax2) = plt.subplots(**PLOT_FIT_RESIDUALS)
@@ -940,7 +943,7 @@ def hist_normfit(data, ax=None, log=False):
     """
     Maximum (log) Likelihood Estimation fit for normal/gaussian distribution
     of histogram data.
-    
+
     """
     pars = stats.norm.fit(data)
     mean, sigma = pars
@@ -968,7 +971,7 @@ def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=F
     """
     Plot Fourier transform tran over frequency space freq by itself or
     under its generating signal.
-    
+
     """
     fft = tran.real if re_im else np.abs(tran)
     if norm:
@@ -1061,11 +1064,11 @@ def FFT(time, signal, window=None, beta=0, specres=None):
 
 # UTILITIES FOR MANAGING DATA AND FILES
 def srange(data, x, x_min=0, x_max=1e9):
-    """ 
+    """
     Returns sub-array containing data inside selected range over dynamic
     variable x in [x_min, x_max]. If x is equal to data, srange acts as a
     clamp for the data array.
-    
+
     """
     xup = x[x > x_min]; dup = data[x > x_min]
     sdata = dup[xup < x_max]
@@ -1086,7 +1089,7 @@ def uncert(cval, gain=0, read=0):
     """
     Associates uncertainty of measurement to a central value, assuming
     gain/scale and reading error are independent.
-    
+
     """
     return np.sqrt((cval*gain)**2 + read**2)
 

@@ -83,7 +83,7 @@ if gen:
     lab.hist_normfit(noise, ax=axs[1])
     axs[1].set_title('Noise distribution')
 else:
-    error = np.sqrt((out.delta/dx)**2 + (out.eps/dy)**2)
+    error = out.eps/dy
     lab.hist_normfit(error, ax=axs[1])
     axs[1].set_title('ODR error distribution')
     axs[1].set_xlabel('deviations/uncertainty')
