@@ -8,6 +8,25 @@ Phylab configuration file
 """
 from matplotlib import cm, rcParams
 
+def typeset(usetex=True, preamble=True, fontsize=12):
+    """
+    Sets up LaTeX typesetting for matplotlib output graphs.
+    Requires a functioning LaTeX installation on your machine.
+
+    """
+    rcParams['text.usetex'] = usetex
+    if preamble:
+        rcParams['text.latex.preamble'] = r'''
+            \usepackage{amsmath}
+            \usepackage{siunitx}
+            '''
+    rcParams['font.family'] = 'serif'
+    rcParams['font.size'] = fontsize
+    #rcParams['font.serif'] = 'Computer Modern'
+
+# By default TeX rendering is disabled, to enable call typeset inside module.
+typeset(usetex=False, preamble=False, fontsize=12)
+
 # Errorbar and Line2D properties for plots in order of appearance in lab
 GRID = {
     'color' : 'gray',
@@ -133,22 +152,15 @@ FOURIER_MARKER = {
     'label' : 'data'
 }
 
-def tex_config(usetex=True, preamble=True, fontsize=12):
-    """
-    Sets up LaTeX typesetting for matplotlib output graphs.
-    Requires a functioning LaTeX installation on your machine.
-    """
-    rcParams['text.usetex'] = usetex
-    if preamble:
-        rcParams['text.latex.preamble'] = [
-            r'''
-            \usepackage{amsmath}
-            \usepackage{siunitx}
-            '''
-        ]
-    rcParams['font.family'] = 'serif'
-    rcParams['font.size'] = fontsize
-    #rcParams['font.serif'] = 'Computer Modern'
+LEGEND = {
+    'loc' : 'best',
+    'framealpha' : 0.7
+}
+
+TICK_LABEL = {
+    'useOffset' : False,
+    'useMathText' : True
+}
 
 """
 Notes

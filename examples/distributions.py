@@ -83,7 +83,16 @@ if gen:
     lab.hist_normfit(noise, ax=axs[1])
     axs[1].set_title('Noise distribution')
 else:
-    error = out.eps/dy
+    # Calculate residuals and the 'adjusted uncertainty' for each data point
+    delta = out.delta  # estimated x-component of the residuals
+    eps   = out.eps    # estimated y-component of the residuals
+    # (xstar,ystar) is the point where the 'residual distance' intersects the
+    # 'ellipse' created by xerr & yerr.
+    xstar = dx*np.sqrt( ((dy*delta)**2) / ( (dy*delta)**2 + (dx*eps)**2 ) )
+    ystar = dy*np.sqrt( ((dx*eps)**2) / ( (dy*delta)**2 + (dx*eps)**2 ) )
+    adjusted_unc = np.sqrt(xstar**2 + ystar**2)
+    # residual is positive/negative if the point lies above/below the model.
+    error = np.sign(data - ODR_lorentz(popt, x)) * np.sqrt(delta**2/dx**2 + eps**2/dy**2)
     lab.hist_normfit(error, ax=axs[1])
     axs[1].set_title('ODR error distribution')
     axs[1].set_xlabel('deviations/uncertainty')

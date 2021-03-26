@@ -10,7 +10,7 @@ from phylab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
 
 ''' Variables that control the script '''
 lin = True # fit data points with linear model
-logi = True # fit data points with logistic model
+logi = False # fit data points with logistic model
 brute = False # brute force search for initial fit parameters
 
 def avg_filter(a, past=7):

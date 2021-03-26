@@ -2,6 +2,8 @@
 """
 Created on Sat Apr 11 23:19:50 2020
 
+Main module of PhyLab package
+
 @author: berni
 """
 # Standard library imports
@@ -121,7 +123,7 @@ def voigt(x, sigma=1, gamma=1, scale=1):
 
 def fder(f, x, pars):
     """ Numerical single variable derivative (for automatic error propagation). """
-    return np.gradient(f(x, *pars), 1)
+    return np.gradient(f(x, *pars), x)
 
 def LPF(data, gain=2e-4):
     """ Naive implementation of a digital Low Pass Filter (first order). """
@@ -157,16 +159,16 @@ def butf(signal, order, fc, ftype='lp', sampf=None):
     butw = sg.butter(N=order, Wn=fc, btype=ftype, output='sos', fs=sampf)
     return sg.sosfilt(butw, signal)
 
-# UTILITIES FOR MANAGING PARAMETER ESTIMATES AND TEST RESULTS
+# UTILITIES FOR EVALUATING AND MANAGING GOODNESS OF FIT TEST RESULTS
 # Some functions share a variable v, verbose mode. Activates various print
-# statements about variables contained inside the function.
-def chitest(prediction, data, unc=1., ddof=0, gauss=False, v=False):
+# statements about the current/exit status of the function and its variables.
+def chitest(expected, data, unc=1., ddof=0, gauss=False, v=False):
     """
     Evaluates Chi-square goodness of fit test for a function, model, to
     a set of data.
 
     """
-    resn = (data - prediction)/unc
+    resn = (data - expected)/unc
     ndof = len(data) - ddof
     chisq = (resn**2).sum()
     if gauss:
@@ -233,6 +235,14 @@ def residual_squares(pars, model, coords, unc=1):
     x, y = coords
     exval = model(x, *pars)
     return np.sum(((y - exval)/unc) ** 2)
+
+def weighted_squares(model, x, y, dx, dy, pars, resx):
+    """
+    Goodness of fit estimator for Orthogonal Distance Regression, where resx
+    are the estimated errors on independent variable x (odr.run.delta).
+    
+    """
+    return np.sum(((model(x + resx, *pars) - y)/dy)**2) + np.sum((resx/dx)**2)
 
 def R_squared(observed, predicted, uncertainty=1):
     """ Returns R square measure of goodness of fit for predicted model. """
@@ -315,9 +325,34 @@ def fit_test(model, coords, popt, unc=1, v=False):
         #prnpar(pars=ANOVA, perr=np.zeros(len(ANOVA)), manual=ANOVA._fields)
     return ANOVA
 
+def conf_delta(x, dfdp, expected, pcov, ci=0.95, cov_scale=1):
+    """
+    Generates upper and lower confidence bands for expected model using delta
+    method: given vector of partial derivatives of model with respect to
+    parameters dfdp and covariance matrix of fitted model parameters pcov.
+    Also returns standard deviation from model for prediction band estimates.
+
+    """
+    # number of floating parameters from covariance matrix
+    p = len(pcov[0]) if not np.isscalar(pcov) else 1
+    ndof = len(x) - p
+    # convert confidence interval in standard deviations of t distribution
+    tval = stats.t.interval(ci, ndof)[-1]
+
+    # Taylor expansion of model around optimal parameters values
+    covm = pcov*cov_scale
+    model_stdev = np.array([np.sqrt(grad.T @ covm @ grad) for grad in dfdp.T])
+
+    # computed deltas over and under best fit model
+    delta = tval * model_stdev
+    upperband = expected + delta
+    lowerband = expected - delta
+    return upperband, lowerband, model_stdev
+
+# UTILITIES FOR EVALUATING, TESTING AND MANAGING FIT PARAMETER ESTIMATES.
 def het_cov(A, b, sol, cov):
     """
-    HC3, Mackinnon and White heteroscedastic-robust covariance estimator.
+    HC3, Mackinnon and White heteroskedastic-robust covariance estimator.
 
     """
     res = b - A @ sol
@@ -334,38 +369,81 @@ def errcor(covm):
             corm[i][j] /= perr[i]*perr[j]
     return perr, corm
 
-def prncor(corm, model=None, manual=None):
-    """ Pretty print covariance of fit model args to precision %.3f """
-    pnms = getfullargspec(model)[0][1:] if manual is None else manual
+def corr_pval(corm, npts):
+    """
+    Computes two sided p-value test for non-correlation with Beta exact
+    distribution for Pearson correlation coefficients in matrix form.
+    Where npts is number of data samples and corm is parameter correlation.
+    Returns correlation coefficients and relative p-values
+
+    """
+    beta = stats.beta(npts/2 - 1, npts/2 - 1, loc=-1, scale=2)
+    correlations = []
     for i in range(np.size(corm, 1)):
         for j in range(1 + i, np.size(corm, 1)):
-            print('corr_%s-%s = %.3f' % (pnms[i], pnms[j], corm[i][j]))
+            correlations.append(corm[i, j])
+    return np.asarray(correlations), 2*beta.cdf(-np.abs(correlations))
 
-def prnpar(pars, perr=None, model=None, prec=2, manual=None):
-    """ Pretty print fit parameters to specified precision %.<prec>f """
-    pnms = getfullargspec(model)[0][1:] if manual is None else manual
-    if perr is None:
-        perr = np.zeros_like(pars)
-    for nam, par, err in zip(pnms, pars, perr):
-        if err is not None and err > 0:
-            dec = np.abs((np.log10(err) - prec)).astype(int)
-            print(f'{nam} = {par:.{dec}f} +- {err:.{dec}f}')
-        else:
-            print(f'{nam} = {par:.{prec}f}')
+def conf_popt(pars, perr, ndof, ci=0.95):
+    """
+    Evaluates ci confidence interval sizes of estimated fit parameters
+    around their central values pars with associated uncertainties perr.
+    Default confidence probability is 95% ~ 1.96 standard deviations.
+
+    """
+    # Interval is not used here because t distribution is always symmetric.
+    # Given the confidence probability ci = 100(1 - alpha) %
+    # alpha = 1 - ci, tail = 1 - alpha/2 = (1 + ci)/2
+    alpha = 1 - ci
+    t = stats.t.ppf(1 - alpha/2., df=ndof)
+    radius = t * perr
+    return np.asarray([pars - radius, pars + radius])
+
+def ci2stdevs(dist=stats.norm, ci=0.95, dist_args=None):
+    """
+    Converts confidence interval to corresponding number of deviations of
+    a standard normal distribution (mean = 0, stdev = 1).
+
+    """
+    # Using interval is equivalent to converting ci to (per)centile point of
+    # distribution, i.e. percentage of area under the curve up to left and
+    # right limits of confidence interval. Usually [0.025 --- 0.975]
+    # pp = (1. + ci) / 2.
+    # then calling percentile point function to find the value of x that
+    # contains pp% of the area under normal curve, where CDF(x) = pp
+    if dist_args is not None:
+        nstd = dist.interval(ci, *dist_args)[-1]
+    else:
+        nstd = dist.interval(ci)[-1]
+    return nstd
+
+def stdevs2ci(dist=stats.norm, sigmas=1, dist_args=None):
+    """
+    Returns confidence interval/level i.e. area under standard normal
+    distribution within n standard deviations/sigmas from the mean.
+
+    """
+    if dist_args is not None:
+        return 1 - 2*dist.sf(sigmas, *dist_args)
+    return 1 - 2*dist.sf(sigmas)
 
 def RMS(seq):
     """ Evaluates Root Mean Square of data sequence through Numpy module. """
     return np.sqrt(np.mean(np.square(np.abs(seq))))
 
 def RMSE(seq, exp=None):
-    """ Associated Root Mean Square Error, expected value = RMS(seq) """
+    """
+    Associated Root Mean Square Error, expected value = RMS(seq)
+    If exp is an optimal fitted model this is square root of chi square test.
+
+    """
     if exp is None:
         exp = RMS(seq)
     return np.sqrt(np.mean(np.square(seq - exp)))
 
 def abs_devs(seq, around=None):
-    """ Evaluates absolute deviations around a central value or expected
-    data sequence.
+    """
+    Evaluates absolute deviations around a central value or expected sequence.
 
     """
     if around is not None:
@@ -375,7 +453,8 @@ def abs_devs(seq, around=None):
 def FWHM(x, y, FT=None):
     """ Evaluates FWHM of fundamental peak for y over dynamic variable x. """
     if FT:
-        x = np.fft.fftshift(x); y = np.abs(np.fft.fftshift(y))
+        x = np.fft.fftshift(x)
+        y = np.abs(np.fft.fftshift(y))
     d = y - (np.max(y) / 2.)
     indexes = np.where(d > 0)[0]
     if FT:
@@ -420,47 +499,27 @@ def valid_cov(covm):
         return True
     return False
 
-def ci2stdevs(dist=stats.norm, ci=0.95, args=None):
-    """
-    Converts confidence interval to corresponding number of deviations of
-    a standard normal distribution (mean = 0, stdev = 1).
+def prncor(corm, model=None, manual=None):
+    """ Pretty print covariance of fit model args to precision %.3f """
+    pnms = getfullargspec(model)[0][1:] if manual is None else manual
+    for i in range(np.size(corm, 1)):
+        for j in range(1 + i, np.size(corm, 1)):
+            print('corr_%s-%s = %.3f' % (pnms[i], pnms[j], corm[i][j]))
 
-    """
-    # Conversion to (per)centile point of distribution i.e. percentage
-    # of area under the curve up to the right limit of confidence interval.
-    pp = (1. + ci) / 2.
-    # Percentile point function returns the value of x that contains
-    # pp% of the area under normal curve, where CDF(x) = pp
-    if args is not None:
-        nstd = dist.ppf(pp, *args)
-    else:
-        nstd = dist.ppf(pp)
-    assert nstd == dist.interval(ci)[-1]
-    return nstd
+def prnpar(pars, perr=None, model=None, prec=2, manual=None):
+    """ Pretty print fit parameters to specified precision %.<prec>f """
+    pnms = getfullargspec(model)[0][1:] if manual is None else manual
+    if perr is None:
+        perr = np.zeros_like(pars)
+    for nam, par, err in zip(pnms, pars, perr):
+        if err is not None and err > 0:
+            dec = np.abs((np.log10(err) - prec)).astype(int)
+            print(f'{nam} = {par:.{dec}f} +- {err:.{dec}f}')
+        else:
+            print(f'{nam} = {par:.{prec}f}')
 
-def stdevs2ci(dist=stats.norm, sigmas=1, args=None):
-    """
-    Returns confidence interval/level i.e. area under standard normal
-    distribution within n standard deviations/sigmas from the mean.
-
-    """
-    if args is not None:
-        return 1 - 2*dist.sf(sigmas, *args)
-    return 1 - 2*dist.sf(sigmas)
-
-def conf_popt(data, pars, perr, ci=0.95):
-    """
-    Evaluates ci confidence interval sizes of estimated fit parameters
-    around their central values pars with associated uncertainties perr.
-    Default confidence probability is 95% ~ 1.96 standard deviations.
-
-    """
-    alpha = 1 - ci
-    t = stats.t.ppf(1 - alpha/2., df=len(data) - len(pars))
-    return t * perr
-
-# LEAST SQUARE FITTING ROUTINES
-# Scipy.curve_fit with horizontal error propagation
+# WEIGHTED LEAST SQUARES AND ORTHOGONAL DISTANCE REGRESSION FITTING ROUTINES
+# Weighted Least Squares with independent variable x error propagation
 def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
             max_iter=20, thr=5, tail=3, rtol=0.5, v=False):
     """
@@ -520,6 +579,9 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
     if np.isscalar(dy):
         dy = np.full(shape=ymes.shape, fill_value=dy)
     deff = dy if dy is not None else np.ones_like(ymes)
+    if max_iter <= 0 :
+        popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg)
+        return popt, pcov, deff
     plist = []; elist = []
     for n in range(max_iter):
         popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg,
@@ -548,8 +610,8 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
               f'function has reached max_iter = {max_iter}.')
     return popt, pcov, deff
 
-# Scipy.odrpack orthogonal distance regressione
-def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
+# Scipy.odrpack Weighted Orthogonal Distance Regression
+def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None, fixed_pars=None):
     """
     Finds best-fit model parameters for a set of data using ODR algorithm.
     model function must be in form f(beta[n], x) where beta is an array_like
@@ -570,6 +632,11 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
         The model function that fits the data fcn(beta, x) --> y.
     p0 : array_like, optional
         Reasonable starting values for the fit parameters.
+    fixed_pars : array_like, optional
+        Sequence of booleans of same length as p0: if any number of the model's
+        parameters should be considered fixed constants set all the
+        corresponding elements of fixed_pars in the same order as p0 to True.
+        Default is None. Equivalent to all False values.
 
     Returns
     -------
@@ -581,6 +648,8 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
         in other words absolute_sigma is True : the opposite of curve_fit's
         default. Extracting uncertainties from pcov.diagonal() will result in
         perr = out.sd_beta / sqrt(out.res_var)
+        If and only if fit_type is OLS covariance matrix gets scaled by
+        reduced chi square == out.res_var in the returned output.
     out : scipy.odr.odrpack.Output
         The Output class that stores the output of an ODR run, like:
         out.res_var : Residual variance or Reduced chi square
@@ -593,23 +662,45 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None):
     """
     model = odrpack.Model(model)
     data = odrpack.RealData(xmes, ymes, sx=dx, sy=dy)
-    odr = odrpack.ODR(data, model, beta0=p0)
+    # the sequence ifixb below determines which parameters are held fixed.
+    # A value of 0 in the same position of a parameter in the beta0 array,
+    # fixes that parameter, any other value > 0 leaves the parameter free.
+    if fixed_pars is not None:
+        fixed_beta = [0 if bol else 1 for bol in fixed_pars]
+        ndof = len(ymes) - len(p0) - fixed_beta.count(0)
+    else:
+        fixed_beta = fixed_pars
+        ndof = len(ymes) - len(p0)
+    odr = odrpack.ODR(data, model, beta0=p0, ifixb=fixed_beta)
+    # Set options for current ODR algorithm run. All defaults are 0 (int)
+    # fit_type : Computational method
+    # 0 Orthogonal distance regression for explicit model ~ y = f(beta, x)
+    # 1 ODR for model function in implicit form ~ f(beta, x) = 0
+    # >= 2 Ordinary Least Squares fit (OLS) only y error is considered.
+    # deriv : Derivative calculation
+    # 0 Numerically approximated by Forward finite Differences (FD)
+    # 1 Numerically approximated by Central finite Differences (CD)
+    # >= 2 User input jacobian matrices with hand coded derivatives.
+    odr.set_job(fit_type=0, deriv=1)
     out = odr.run()
     popt = out.beta; pcov = out.cov_beta
     out.pprint()
-    print('Chi square/ndof = %.1f/%d' % (out.sum_square, len(ymes)-len(popt)))
+    ndof = len(ymes) - len(popt) - fixed_beta.count(0)
+    print('Chi square/ndof = %.1f/%d' % (out.sum_square, ndof))
     return popt, pcov, out
 
-def gen_init(model, coords, bounds, unc=1):
+def gen_init(model, coords, bounds=None, unc=1):
     """
     Differential evolution algorithm to guess valid initial parameter values
     within bounds in order to fit model to coords.
 
     """
+    npars = len(getfullargspec(model)[0][1:])
     if bounds is None:
-        bounds = []
-        for i in len(getfullargspec(model)[0] - 1):
-            bounds.append([-1e8, 1e8])
+        bounds = [[-1e8, 1e8] for i in range(npars)]
+    for idx in range(npars):
+        if bounds[idx] is None:
+            bounds[idx] = [-1e8, 1e8]
 
     result = differential_evolution(residual_squares, bounds,
                                     args=[model, coords, unc], seed=42)
@@ -701,6 +792,7 @@ def elpfit(coords, uncerts=None):
     A = np.column_stack([x**2, x*y, y**2, x, y])
     b = np.ones_like(y)
     if uncerts is not None and len(uncerts) == len(b):
+    # Slicing a matrix with [:, None] returs a vector/array of all its columns
         A /= uncerts[:, None]
         b /= uncerts[:, None]
     sol, chisq = np.linalg.lstsq(A, b, rcond=None)[:2]
@@ -771,7 +863,7 @@ def alg_expfit(x, y, dy=None, absolute_sigma=False):
         dy = np.ones_like(y)
     elif np.isscalar(dy):
         dy = np.full(shape=y.shape, fill_value=dy)
-    
+
     for xi, yi, dyi in zip(x, y, dy):
         wi = 1./dyi**2
         S_x2_y += xi * xi * yi * wi
@@ -779,18 +871,18 @@ def alg_expfit(x, y, dy=None, absolute_sigma=False):
         S_x_y += xi * yi
         S_x_y_lny += xi * yi * np.log(yi) * wi
         S_y += yi * wi
-    
+
     Det = S_y * S_x2_y - S_x_y ** 2
     a = (S_x2_y * S_y_lny - S_x_y * S_x_y_lny) / Det
     b = (S_y * S_x_y_lny - S_x_y * S_y_lny) / Det
     popt = [np.exp(a), b]
-    
+
     # Parameter covariance estimates
     chisq, ndof, resn = chitest(popt[0]*np.exp(popt[1]*x), y, unc=dy, ddof=len(popt))
     X = np.column_stack([x/dy.T, 1./dy.T])
     pcov = np.linalg.pinv(X.T @ X)
     if absolute_sigma is False:
-         pcov *= chisq/ndof
+        pcov *= chisq/ndof
     return popt, pcov
 
 # UTILITIES FOR MANAGING FIGURE AXES AND OUTPUT GRAPHS
@@ -873,21 +965,24 @@ def days_from_epoch(date):
     """ Returns number of days passed since UNIX Epoch. """
     return (date - datetime.datetime(1970, 1, 1)).days
 
-def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
+def plot_band(ax, space, upper, lower, delta=None, fill=False, ci=0.95):
     """
-    Plots confidence bands for predicted model within nstd standard deviations
-    from optimal parameters pars. Colors in bounded region if fill is True.
+    Plots fitted model confidence bands and future data prediction intervals.
+    Shades bounded region if fill, adds prediction bands if delta is given.
 
     """
-    space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)
-    pred_up = model(space, *(pars + nstd * perr))
-    pred_lo = model(space, *(pars - nstd * perr))
-    line_up = ax.plot(space, pred_up, **DASHED_LINE)
-    color = line_up[0].get_color()
-    line_lo = ax.plot(space, pred_lo, c=color, **DASHED_LINE)
-    if fill:
-        ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.2)
-    return line_up, line_lo
+    ax.fill_between(space, lower, upper, color='gray', alpha=0.3,
+                    label=r'{:.0f}\% confidence band'.format(100 * ci))
+    if delta is not None:
+        pred_up = upper + delta
+        pred_lo = lower - delta
+        line_up = ax.plot(space, pred_up, **DASHED_LINE,
+                          label=r'{:.0f}\% prediction band'.format(100 * ci))
+        color = line_up[0].get_color()
+        ax.plot(space, pred_lo, c=color, **DASHED_LINE)
+        if fill:
+            ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.3)
+    return ax
 
 def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=None, date=None):
     """
@@ -899,6 +994,7 @@ def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=N
         fig, (ax1, ax2) = plt.subplots(**PLOT_FIT_RESIDUALS)
     else:
         ax1, ax2 = axs
+        fig = ax1.figure
     space = np.linspace(np.min(0.9*xmes), np.max(1.05*xmes), 2000)
     chisq, ndof, resn = chitest(model(xmes, *pars), ymes, dy, ddof=len(pars))
     ax1 = grid(ax1, xlab=False, ylab=False)
@@ -912,10 +1008,10 @@ def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=N
         ax1.errorbar(xmes, ymes, dy, dx, **MEASURE_MARKER)
     if date is not None:
         ax1.plot_date(xmes + days_from_epoch(date) - len(xmes), model(xmes, *pars),
-                      c='gray', label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
+                      c='gray', label=r'fit $\chi^2 = %.1f/%d$' % (chisq, ndof))
     else:
         ax1.plot(space, model(space, *pars), c='gray',
-                 label=r'fit$\chi^2 = %.1f/%d$' % (chisq, ndof))
+                 label=r'fit $\chi^2 = %.1f/%d$' % (chisq, ndof))
 
     ax2 = grid(ax2, ylab='residuals')
     if in_out is not None:
@@ -1070,9 +1166,10 @@ def srange(data, x, x_min=0, x_max=1e9):
     clamp for the data array.
 
     """
-    xup = x[x > x_min]; dup = data[x > x_min]
-    sdata = dup[xup < x_max]
-    return sdata
+    x_upper = x[x > x_min]
+    data_upper = data[x > x_min]
+    select_data = data_upper[x_upper < x_max]
+    return select_data
 
 def mesrange(x, y, dx=None, dy=None, x_min=0, x_max=1e9):
     """ Restricts measured data to points where x_min < x < x_max. """

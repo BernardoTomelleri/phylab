@@ -4,33 +4,62 @@ Created on Mon Mar 22 01:51:37 2021
 
 @author: berni
 """
-from phylab import (np, plt, grid, curve_fit)
+from phylab import (np, plt, grid, curve_fit, stats, DASHED_LINE)
 import phylab as lab
 
 ''' Variables that control the script '''
-proper = True  # Evaluate actual variance of model with Taylor expansion
+naive = False  # Draw confidence bands as model(parameters +/- param. errors)
+tex = False  # LaTeX typesetting maths and descriptions
 
 def lin(x, m, q):
     return m*x + q
 
-def confidence_band(x, dfdp, predict, pcov, ci=0.95, covscale=1):
-    from scipy.stats import t
-    # Given the confidence probability ci = 100(1 - alpha)
-    # alpha = 1 - ci, tail = 1 - alpha/2 = (1 + ci)/2
-    prb = (1.0 + ci)/2.
-    ndof = len(x) - len(popt)
-    tval = t.ppf(prb, ndof)
-    # Number of parameters from covariance matrix
-    n = len(pcov[0])
-    df2 = np.zeros(shape=x.shape)
-    for j in range(n):
-        for k in range(n):
-            df2 += dfdp[j] * dfdp[k] * pcov[j,k]
-    df = np.sqrt(covscale*df2)
-    delta = tval * df
-    upperband = predict + delta
-    lowerband = predict - delta
-    return upperband, lowerband
+def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
+    """
+    Plots confidence bands for predicted model adding and substracting nstd
+    standard deviations from optimal parameters pars.
+    Colors in bounded region if fill is True.
+
+    """
+    space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)
+    pred_up = model(space, *(pars + nstd * perr))
+    pred_lo = model(space, *(pars - nstd * perr))
+    line_up = ax.plot(space, pred_up, **DASHED_LINE)
+    color = line_up[0].get_color()
+    line_lo = ax.plot(space, pred_lo, c=color, **DASHED_LINE)
+    if fill:
+        ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.3)
+    return line_up, line_lo
+
+def conf_delta(x, dfdp, expected, pcov, ci=0.95, covscale=1):
+    """
+    Generates upper and lower confidence bands for expected model using delta
+    method: given vector of partial derivatives of model with respect to
+    parameters dfdp and covariance matrix of fitted model parameters pcov.
+    Also returns standard deviation from model for prediction band estimates.
+
+    """
+    # number of floating parameters from covariance matrix
+    p = len(pcov[0]) if not np.isscalar(pcov) else 1
+    ndof = len(x) - p
+    # convert confidence interval in standard deviations of t distribution
+    tval = stats.t.interval(ci, ndof)[-1]
+
+    # Taylor expansion of model around optimal parameters
+    df2 = np.zeros(shape=expected.shape)
+    for i in range(p):
+        for j in range(p):
+            df2 += dfdp[i] * dfdp[j] * pcov[i, j]
+    model_stdev = np.sqrt(covscale*df2)
+    # In a more geometric/Pythonic way, where dfdp.T is a column of gradients
+    # written as rows evaluated at every sampled point of the expected model
+    # model_stdev = np.array([np.sqrt(grad.T @ pcov @ grad) for grad in dfdp.T])
+
+    # computed deltas over and under best fit model
+    delta = tval * model_stdev
+    upperband = expected + delta
+    lowerband = expected - delta
+    return upperband, lowerband, model_stdev
 
 # Input data
 x, dx, y, dy = np.loadtxt('./data/ADC.txt', unpack=True)
@@ -42,16 +71,17 @@ chisq, ndof, resn = lab.chitest(lin(x, *popt), y, unc=dy,
                                        ddof=len(popt), v=True)
 goodness = lab.fit_test(lin, coords=[x, y], popt=popt, unc=dy, v=True)
 
+lab.rc.typeset(usetex=tex, preamble=tex, fontsize=12)
 # Graph with residuals and naive 1 sigma confidence bands
 fig, (axf, axr) = lab.pltfitres(lin, x, y, dy=dy, pars=popt)
+if naive:
+    conf_bands(axf, lin, x, pars=popt, perr=perr, fill=True)
+# Evaluate actual variance of model with delta method
+space = np.linspace(0.9*np.min(x), 1.05*np.max(x), 2000)
+mdist = (space - np.mean(space))/np.std(space)
+gradients = np.array([np.ones_like(mdist), mdist])
+upb, lob, delta = conf_delta(x, gradients, lin(space, *popt), pcov)
+lab.plot_band(axf, space, upb, lob, delta, fill=False, ci=0.95)
 axf.set_ylabel('$\Delta V$ [V]')
-lab.conf_bands(axf, lin, x, popt, perr=perr, fill=True)
-axr.set_xlabel('x [digit]', x=0.9)
-
-if proper:
-    upb, lob = confidence_band(x, [1, x], lin(x, *popt), pcov, ci=0.683)
-    axf.plot(x, upb, c='r', ls='--', lw=0.8,
-             zorder=10, alpha=0.7, label=r'68.3 \% confidence band')
-    axf.plot(x, lob, c='r', ls='--', lw=0.8,
-             zorder=10, alpha=0.7)
+axr.set_xlabel('ADC reading [digit]', x=0.8)
 legend = axf.legend(loc='best')
