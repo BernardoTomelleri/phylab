@@ -14,8 +14,8 @@ def typeset(usetex=True, preamble=True, fontsize=12):
     Requires a functioning LaTeX installation on your machine.
 
     """
-    rcParams['font.size'] = fontsize
     rcParams['text.usetex'] = usetex
+    rcParams['font.size'] = fontsize
 
     if usetex:
         rcParams['font.family'] = 'serif'
