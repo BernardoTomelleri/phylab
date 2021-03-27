@@ -75,10 +75,10 @@ lab.rc.typeset(usetex=tex, preamble=tex, fontsize=12)
 # Graph with residuals and naive 1 sigma confidence bands
 fig, (axf, axr) = lab.pltfitres(lin, x, y, dy=dy, pars=popt)
 if naive:
-    conf_bands(axf, lin, x, pars=popt, perr=perr, fill=True)
+    perr_bands(axf, lin, x, pars=popt, perr=perr, fill=True)
 # Evaluate actual variance of model with delta method
 space = np.linspace(0.9*np.min(x), 1.05*np.max(x), 2000)
-mdist = (space - np.mean(space))/np.std(space)
+mdist = np.sqrt((space - np.mean(x))**2/np.var(x, ddof=len(x) - 1))
 gradients = np.array([np.ones_like(mdist), mdist])
 upb, lob, delta = conf_delta(x, gradients, lin(space, *popt), pcov)
 lab.plot_band(axf, space, upb, lob, delta, fill=False, ci=0.95)

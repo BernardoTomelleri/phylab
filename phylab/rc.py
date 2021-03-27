@@ -19,7 +19,7 @@ def typeset(usetex=True, preamble=True, fontsize=12):
 
     if usetex:
         rcParams['font.family'] = 'serif'
-        rcParams['font.serif'] = 'Computer Modern'
+        #rcParams['font.serif'] = 'Computer Modern'
 
     if preamble:
         rcParams['text.latex.preamble'] = r'''
