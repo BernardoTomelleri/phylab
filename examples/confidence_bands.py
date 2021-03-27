@@ -14,11 +14,11 @@ tex = False  # LaTeX typesetting maths and descriptions
 def lin(x, m, q):
     return m*x + q
 
-def conf_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
+def perr_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     """
-    Plots confidence bands for predicted model adding and substracting nstd
-    standard deviations from optimal parameters pars.
-    Colors in bounded region if fill is True.
+    Plots confidence bands for model by adding and substracting nstd standard
+    deviations from optimal parameters. Colors in bounded region if fill is True.
+    Warning: Barely somewhat licit with constant/single parameters models
 
     """
     space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)

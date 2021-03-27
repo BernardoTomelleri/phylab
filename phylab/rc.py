@@ -14,15 +14,18 @@ def typeset(usetex=True, preamble=True, fontsize=12):
     Requires a functioning LaTeX installation on your machine.
 
     """
+    rcParams['font.size'] = fontsize
     rcParams['text.usetex'] = usetex
+
+    if usetex:
+        rcParams['font.family'] = 'serif'
+        rcParams['font.serif'] = 'Computer Modern'
+
     if preamble:
         rcParams['text.latex.preamble'] = r'''
             \usepackage{amsmath}
             \usepackage{siunitx}
             '''
-    rcParams['font.family'] = 'serif'
-    rcParams['font.size'] = fontsize
-    #rcParams['font.serif'] = 'Computer Modern'
 
 # By default TeX rendering is disabled, to enable call typeset inside module.
 typeset(usetex=False, preamble=False, fontsize=12)

@@ -240,7 +240,7 @@ def weighted_squares(model, x, y, dx, dy, pars, resx):
     """
     Goodness of fit estimator for Orthogonal Distance Regression, where resx
     are the estimated errors on independent variable x (odr.run.delta).
-    
+
     """
     return np.sum(((model(x + resx, *pars) - y)/dy)**2) + np.sum((resx/dx)**2)
 
@@ -685,7 +685,6 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None, fixed_pars=None):
     out = odr.run()
     popt = out.beta; pcov = out.cov_beta
     out.pprint()
-    ndof = len(ymes) - len(popt) - fixed_beta.count(0)
     print('Chi square/ndof = %.1f/%d' % (out.sum_square, ndof))
     return popt, pcov, out
 
@@ -983,6 +982,23 @@ def plot_band(ax, space, upper, lower, delta=None, fill=False, ci=0.95):
         if fill:
             ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.3)
     return ax
+
+def perr_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
+    """
+    Plots confidence bands for model by adding and substracting nstd standard
+    deviations from optimal parameters. Colors in bounded region if fill is True.
+    Warning: These are not and should not be used as confidence bands.
+
+    """
+    space = np.linspace(np.min(0.9*x), np.max(1.05*x), 2000)
+    pred_up = model(space, *(pars + nstd * perr))
+    pred_lo = model(space, *(pars - nstd * perr))
+    line_up = ax.plot(space, pred_up, **DASHED_LINE)
+    color = line_up[0].get_color()
+    line_lo = ax.plot(space, pred_lo, c=color, **DASHED_LINE)
+    if fill:
+        ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.3)
+    return line_up, line_lo
 
 def pltfitres(model, xmes, ymes, dx=None, dy=None, pars=None, axs=None, in_out=None, date=None):
     """
