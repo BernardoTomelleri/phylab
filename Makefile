@@ -3,7 +3,7 @@
 # make clean		# remove old package files 
 
 export NAME=phylab
-export VERSION=`python -c "import $(NAME); print($(NAME).__version__)"`
+export VERSION=`python3 -c "import $(NAME); print($(NAME).__version__)"`
 
 .PHONY: all prereqs push release readme clean help
 
