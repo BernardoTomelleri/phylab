@@ -5,13 +5,14 @@ Created on Sat Mar 13 18:01:19 2021
 @author: berni
 """
 import pandas as pd
-from phylab import (np, plt, grid, propfit, valid_cov, errcor, prnpar, chitest,
+from phylab import (np, plt, grid, rc, propfit, valid_cov, errcor, prnpar, chitest,
                     curve_fit, tick, logistic, gen_init, days_from_epoch, fit_test)
 
 ''' Variables that control the script '''
 lin = True # fit data points with linear model
 logi = False # fit data points with logistic model
 brute = False # brute force search for initial fit parameters
+tex = False # LaTeX typesetting maths and descriptions
 
 def avg_filter(a, past=7):
     avg = []
@@ -38,6 +39,7 @@ last.insert(2, 'nuovi_positivi (7-day avg.)',
 patient_data = last[last.columns[1:]].to_numpy(dtype=np.float64).T
 days = np.array(range(1, NUM_DAYS + 1))
 last.columns = last.columns.str.replace('_', ' ')
+rc.typeset(usetex=tex, fontsize=12)
 fig_fit, axs = plt.subplots(nrows=2, ncols=2)
 for patient, ax, name in zip(patient_data, axs.flat, last.columns[1:]):
     pat_err = 1e-2*patient

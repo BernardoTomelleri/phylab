@@ -2,7 +2,10 @@
 # make or make all	# build package distribution
 # make clean		# remove old package files 
 
-.PHONY: all prereqs release readme clean help
+export NAME=phylab
+export VERSION=`python -c "import $(NAME); print($(NAME).__version__)"`
+
+.PHONY: all prereqs push release readme clean help
 
 all: prereqs build check
 
@@ -13,6 +16,7 @@ help:
 	@echo "check - run twine check on built distribution"
 	@echo "readme - generate Markdown documentation LaTeX code with .svgs"
 	@echo "release - publish packaged release to PyPI"
+	@echo "push - tag last commit with current version and push to origin"
 	@echo "venv - create and activate virtual environment with SciPy"
 
 prereqs:
@@ -30,6 +34,11 @@ release: build
 
 readme:
 	python3 -m readme2tex --nocdn --readme read.tex.md --output README.md
+
+push:
+	git tag v$(VERSION)
+	git push origin --all
+	git push origin --tags
 
 venv:
 	python3 -m venv venv

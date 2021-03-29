@@ -58,7 +58,7 @@ if chi2.size > 0:
     prnpar(p, unc, manual=['Xc', 'Yc', 'a', 'b', 'angle'])
 else: unc = np.zeros_like(sol)
 
-if tex: plt.rc('text', usetex=True); plt.rc('font', family='serif')
+lab.rc.typeset(usetex=tex, fontsize=12)
 xCop, yCop = Ell_coords(*cen, rad); xfit, yfit = Ell_coords(*pars); xEl, yEl = Ell_coords(*p)
 fig, axs = plt.subplots(1, 2, sharex=True); axc = axs[0]; axe = axs[1]
 for ax in axs:

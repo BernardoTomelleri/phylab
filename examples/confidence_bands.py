@@ -16,8 +16,8 @@ def lin(x, m, q):
 
 def perr_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     """
-    Plots confidence bands for model by adding and substracting nstd standard
-    deviations from optimal parameters. Colors in bounded region if fill is True.
+    Plots parameter error bands for model by adding and substracting nstd
+    standard deviations from optimal pars. Colors in bounded region if fill.
     Warning: Barely somewhat licit with constant/single parameters models
 
     """
@@ -71,7 +71,7 @@ chisq, ndof, resn = lab.chitest(lin(x, *popt), y, unc=dy,
                                        ddof=len(popt), v=True)
 goodness = lab.fit_test(lin, coords=[x, y], popt=popt, unc=dy, v=True)
 
-lab.rc.typeset(usetex=tex, preamble=tex, fontsize=12)
+lab.rc.typeset(usetex=tex, fontsize=12)
 # Graph with residuals and naive 1 sigma confidence bands
 fig, (axf, axr) = lab.pltfitres(lin, x, y, dy=dy, pars=popt)
 if naive:

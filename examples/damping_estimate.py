@@ -53,7 +53,7 @@ else: t_a, x_a, t_b, x_b = np.loadtxt('./data/beat.txt', unpack = True)
 t_min = 1.8; t_max = 130.
 
 # Preliminary plot to visualize the sub-interval of data to analyze
-if tex: plt.rc('text', usetex=True); plt.rc('font', family='serif')
+lab.rc.typeset(usetex=tex, fontsize=12)
 fig, axs = plt.subplots(2, 1)
 grid(axs[0], xlab='Time [s]', ylab='Pendulum A [ADC counts]')
 grid(axs[1], xlab='Time [s]', ylab='Pendulum B [ADC counts]')

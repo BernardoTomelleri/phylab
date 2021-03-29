@@ -27,6 +27,7 @@ from matplotlib import dates
 # Configuration file import
 from phylab.rc import (
     cm,
+    VERBOSE,
     GRID,
     MAJ_TICKS,
     MIN_TICKS,
@@ -87,6 +88,7 @@ def coope_circ(coords, Xc=0, Yc=0, Rc=1):
     """
     Function of circle pars to be minimized by Coope fit algorithm.
     This is not meant to be used directly.
+
     """
     x, y = coords
     return Xc*x + Yc*y + Rc
@@ -162,7 +164,7 @@ def butf(signal, order, fc, ftype='lp', sampf=None):
 # UTILITIES FOR EVALUATING AND MANAGING GOODNESS OF FIT TEST RESULTS
 # Some functions share a variable v, verbose mode. Activates various print
 # statements about the current/exit status of the function and its variables.
-def chitest(expected, data, unc=1., ddof=0, gauss=False, v=False):
+def chitest(expected, data, unc=1., ddof=0, gauss=False, v=VERBOSE):
     """
     Evaluates Chi-square goodness of fit test for a function, model, to
     a set of data.
@@ -287,7 +289,7 @@ def t_test(pars, perr):
     p_vals = stats.t.sf(np.abs(t_vals), df=len(pars))
     return t_vals, p_vals
 
-def fit_test(model, coords, popt, unc=1, v=False):
+def fit_test(model, coords, popt, unc=1, v=VERBOSE):
     """
     Evaluates goodness of fit metrics for best fit parameters popt with model
     to data coords as defined in goodness named tuple.
@@ -476,13 +478,16 @@ def optm(x, y, minm=None, absv=None):
 
 def ldec(seq, upb=None):
     """ Checks if sequence is decreasing, starting from an upper bound. """
+    # if upper bound is given check that all starting elements are below it
     if upb is not None:
         if any(seq[0] > upb):
             return False
         if len(seq) == 1 and all(seq[0] <= upb):
             return True
-    check = np.array([seq[k+1] <= seq[k] for k in range(len(seq)-1)])
-    if all(bol.all() is True for bol in check):
+
+    # if inequality holds True for all elements in sequence returns True
+    check = [seq[k+1] <= seq[k] for k in range(len(seq)-1)]
+    if all(check[0]) is True:
         return True
     return False
 
@@ -494,6 +499,7 @@ def valid_cov(covm):
     """
     Checks whether covm is a valid covariance matrix. That is: finite,
     symmetric and not zero on its diagonal.
+
     """
     if np.isfinite(covm).all() and covm.diagonal().all() != 0. and is_symmetric(covm):
         return True
@@ -518,10 +524,100 @@ def prnpar(pars, perr=None, model=None, prec=2, manual=None):
         else:
             print(f'{nam} = {par:.{prec}f}')
 
+def sci_not(num_string):
+    """
+    Convert NumPy engineering notation e+x to scientific notation as LaTeX
+    power of 10^{x} if first digit in exponent is 0 it is discarded.
+
+    """
+    if 'e+' in num_string or 'e-' in num_string:
+        num_string = num_string.replace('e+0', r' \times 10^{')
+        num_string = num_string.replace('e-0', r' \times 10^{-')
+        # In case first digit of exponent is non-zero
+        num_string = num_string.replace('e+', r' \times 10^{')
+        num_string = num_string.replace('e-', r' \times 10^{-')
+
+        # Close brackets by replacing tabular column alignment/separator
+        num_string = num_string.replace('\t', '}\t')
+        num_string = num_string.replace('&}', '&')
+    return num_string
+
+def texarray(array, fname='table.tex', fmt='%.9g', array_type='tabular',
+             scientific=False, v=VERBOSE):
+    r"""
+    Writes numpy array to file as LaTeX tabular/array/matrix or custom env.
+    if scientific replaces NumPy's engineer notation e+x with \times 10^{x}.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from phylab import texarray
+    >>> x = [0.359, 0.414, 0.464, 0.514, 0.554]
+    >>> y = [1.459, 1.68 , 1.86 , 2.045, 2.235]
+    >>> dx = [0.001, 0.001, 0.001, 0.001, 0.001]
+    >>> dy = [0.007, 0.008, 0.01 , 0.003, 0.006]
+    >>> texarray(array=np.columnstack[x, dx, y, dy], fmt='%.3f', v=True)
+
+    \begin{table}[h]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+    0.359    &    0.001    &    1.459    &    0.007     \\
+    0.414    &    0.001    &    1.680    &    0.008     \\
+    0.464    &    0.001    &    1.860    &    0.010     \\
+    0.514    &    0.001    &    2.045    &    0.003     \\
+    0.554    &    0.001    &    2.235    &    0.006     \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    """
+    # If array is 1-dimensional print it as row (if too long prints as column)
+    if len(array.shape) == 1:
+        array = np.array([array]) if len(array) <= 10 else np.array([array]).T
+
+    # Set up alignment command for tabular and format of floats in cells
+    cols = array.shape[1]
+    tab_align = 'c'*cols
+
+    filename = fname
+    with open(filename, 'w+') as file:
+        file.write('\n\\begin{table}[h]\n')
+        file.write('\\centering\n')
+        file.write('\\begin{' + array_type + '}{%s}\n' %tab_align)
+        file.write('\\toprule\n')
+
+        # Let numpy handle correct delimiter, newline characters and alignment
+        np.savetxt(file, array, fmt=fmt, delimiter='\t&\t',
+                   newline='\t \\\\ \n')
+
+        file.write('\\bottomrule\n')
+        file.write('\\end{' + array_type + '}\n')
+        file.write('\\end{table}\n')
+
+        if scientific:
+        # Iterate over original lines in file and write the edited table to tmp
+            file.seek(0)
+            with open('tmpfile.tex', 'w+') as tmp:
+                for line in file:
+                    if '&' in line:
+                        line = sci_not(line)
+                    tmp.write(line)
+                # File cursor is at EOF for both files, rewind and rewrite
+                # the lines in original file with edited lines from tmpfile
+                file.seek(0)
+                tmp.seek(0)
+                file.write(tmp.read())
+            # Exiting out of indent flushes and closes tmpfile, finally delete
+            os.remove('tmpfile.tex')
+        if v:
+            file.seek(0)
+            print(file.read())
+
 # WEIGHTED LEAST SQUARES AND ORTHOGONAL DISTANCE REGRESSION FITTING ROUTINES
 # Weighted Least Squares with independent variable x error propagation
 def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
-            max_iter=20, thr=5, tail=3, rtol=0.5, v=False):
+            max_iter=20, thr=5, tail=3, rtol=0.5, chimin=1e-8, v=VERBOSE):
     """
     Modified non-linear least squares (curve_fit) algorithm to fit model to a
     set of data, accounting for x-axis uncertainty using linear error
@@ -560,9 +656,17 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
     tail : int, optional
         Arbitrary natural constant, number of parameter vectors that need
         to converge to the values found in the latest iteration. 3 by default.
-    tol : float, optional
+    rtol : float, optional
         Arbitrary constant, the fraction of errorbar by which the last tail
         parameters should differ in order to be convergent. 0.5 by default.
+    min_chi : float, optional
+        Arbitrary constant, the minimum value of reduced chi square test at
+        which point error propagation is stopped. This is used as a last
+        resort/to avoid errorbars from becoming huge where the derivative is
+        quite steep. 1e-8 by default.
+        Other sensible values are: 1 i.e. expected value of reduced chi square
+        0.3 ~ 1 - 1/sqrt(2) i.e. 1 sigma less than expected value
+        (assuming errors have gaussian distribution).
 
     Returns
     -------
@@ -579,38 +683,56 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
     if np.isscalar(dy):
         dy = np.full(shape=ymes.shape, fill_value=dy)
     deff = dy if dy is not None else np.ones_like(ymes)
-    if max_iter <= 0 :
-        popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg)
+
+    # If no propagation is wanted or necessary act like regular curve_fit
+    popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg)
+    neg = all(deff > thr*(dx * np.mean(np.abs(fder(model, xmes, popt)))))
+    if max_iter <= 0 or neg:
+        if v:
+            print(f'x-err negligible: thr = {thr}. No propagation occurred.')
         return popt, pcov, deff
+
+    # Attempt least squares fit and record results to check for convergence
     plist = []; elist = []
     for n in range(max_iter):
-        popt, pcov = curve_fit(model, xmes, ymes, p0, deff, method=alg,
+        popt, pcov = curve_fit(model, xmes, ymes, popt, deff, method=alg,
                                absolute_sigma=False)
         deff = np.sqrt(deff**2 + (dx * fder(model, xmes, popt))**2)
         plist.append(popt)
         elist.append(errcor(pcov)[0])
+
+        # Condition for popt convergence: if the last tail optimal parameter
+        # estimates all differ by less than tol errorbars from one another
+        # |in absolute value|, they are considered equivalent and no more
+        # iterations are necessary. Type is boolean like neg and chired.
         con = ldec(np.abs(np.diff(plist[-tail:], axis=0)),
                    upb=elist[-tail]*rtol) if n >= tail else False
-        neg = np.mean(deff) > thr*np.mean(dx * abs(fder(model, xmes, popt)))
-        if neg or con:
+        neg = all(deff > thr*(dx * np.mean(np.abs(fder(model, xmes, popt)))))
+        chisq, ndof = chitest(model(xmes, *popt), ymes, deff, ddof=len(popt))[:-1]
+        chired = chisq/ndof < chimin
+        if neg or con or chired:
             if v:
-                if neg: print(f'x-err negligibility reached in {n} iterations')
-                else: print(f'popt values converged in {n} iterations:')
+                if neg:
+                    print(f'x-err negligibility reached in {n+1} iterations.')
+                elif con:
+                    print(f'popt values converged in {n+1} iterations.')
+                else:
+                    print(f'Reduced chi square < chi min = {chimin}',
+                          f'reached in {n+1} iterations.')
             perr, pcor = errcor(pcov)
             print('Optimal parameters:')
             prnpar(popt, perr, model)
-            # Chi square test
-            chisq, ndof = chitest(model(xmes, *popt), ymes, deff, ddof=len(popt))[:-1]
             print(f'reduced chi square: {chisq/ndof:.2e}')
             # Normalized parameter covariance
             print('Correlation matrix:\n', pcor)
             break
-    if not (neg or con):
+
+    if not (neg or con or chired):
         print('Warning: No condition met, number of calls to',
               f'function has reached max_iter = {max_iter}.')
     return popt, pcov, deff
 
-# Scipy.odrpack Weighted Orthogonal Distance Regression
+# Scipy.odr package Weighted Orthogonal Distance Regression
 def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None, fixed_pars=None):
     """
     Finds best-fit model parameters for a set of data using ODR algorithm.
@@ -985,8 +1107,8 @@ def plot_band(ax, space, upper, lower, delta=None, fill=False, ci=0.95):
 
 def perr_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
     """
-    Plots confidence bands for model by adding and substracting nstd standard
-    deviations from optimal parameters. Colors in bounded region if fill is True.
+    Plots parameter error bands for model by adding and substracting nstd
+    standard deviations from optimal pars. Colors in bounded region if fill.
     Warning: These are not and should not be used as confidence bands.
 
     """
@@ -1074,6 +1196,7 @@ def hist_normfit(data, ax=None, log=False):
     pdf_fitted = stats.norm.pdf(x, loc=mean, scale=sigma)
     # Scale the fitted PDF by area of the histogram
     pdf_fitted = pdf_fitted * (len(data)*binwidth)
+
     #Plot PDF
     ax.plot(x, pdf_fitted, 'r--')
     grid(ax, ylab='Entries/bin')
@@ -1117,7 +1240,7 @@ def plotfft(freq, tran, signal=None, norm=False, dB=False, re_im=False, mod_ph=F
     return fig, (ax1, ax2)
 
 # UTILITIES FOR FOURIER TRANSFORMS OF DATA ARRAYS
-def sampling(space, dev=None, v=False):
+def sampling(space, dev=None, v=VERBOSE):
     """ Evaluates average sampling interval Dx and its standard deviation. """
     Deltas = np.zeros(len(space)-1)
     sort = np.sort(space)
@@ -1231,7 +1354,7 @@ def interleave(a, b):
     merged[0::2] = a; merged[1::2] = b
     return np.array(merged)
 
-def floop(path=None, usecols=None, v=False):
+def floop(path=None, usecols=None, v=VERBOSE):
     """ Allows looping over files of measurements (of a constant value). """
     if path is None:
         path = os.getcwd() + '/data'
@@ -1240,6 +1363,6 @@ def floop(path=None, usecols=None, v=False):
         data = np.loadtxt(file, unpack=True, usecols=usecols)
         if v:
             print(file)
-            print('ave = ', np.mean(data))
+            print('mean = ', np.mean(data))
             print('std = ', np.std(data, ddof=1)/np.sqrt(len(data)))
         yield data

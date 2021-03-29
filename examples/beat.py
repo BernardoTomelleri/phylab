@@ -8,8 +8,8 @@ from phylab import (np, plt, grid, propfit, errcor, prnpar, chitest, pltfitres)
 import phylab as lab
 
 ''' Variables that control the script '''
-tix = True  # manually choose spacing between axis ticks
-tex = True  # LaTeX typesetting maths and descriptions
+tix = False  # manually choose spacing between axis ticks
+tex = False  # LaTeX typesetting maths and descriptions
 
 def beat(t, A, frq_d, frq_m, phs_f=0, phs_c=0, ofs=0, tau=1):
     return np.exp(-t/tau)*2*A*(np.cos(np.pi*frq_d*t + (phs_f + phs_c)/2.)
@@ -18,7 +18,7 @@ def beat(t, A, frq_d, frq_m, phs_f=0, phs_c=0, ofs=0, tau=1):
 t_a, x_a, t_b, x_b = np.loadtxt('./data/beat.txt', unpack=True)
 t_min = 1.8; t_max = 80.
 # Preliminary plot to visualize the sub-interval of data to analyze
-if tex: plt.rc('text', usetex=True); plt.rc('font', family='serif')
+lab.rc.typeset(usetex=tex, fontsize=12)
 fig, (ax1, ax2) = plt.subplots(2, 1)
 grid(ax1, xlab='Time [s]', ylab='Pendulum A [ADC counts]')
 grid(ax2, xlab='Time [s]', ylab='Pendulum B [ADC counts]')

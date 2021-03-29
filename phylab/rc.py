@@ -16,19 +16,21 @@ def typeset(usetex=True, preamble=True, fontsize=12):
     """
     rcParams['text.usetex'] = usetex
     rcParams['font.size'] = fontsize
-
-    if usetex:
-        rcParams['font.family'] = 'serif'
-        #rcParams['font.serif'] = 'Computer Modern'
+    rcParams['font.family'] = 'serif' if usetex else 'sans-serif'
 
     if preamble:
         rcParams['text.latex.preamble'] = r'''
             \usepackage{amsmath}
             \usepackage{siunitx}
+            \usepackage{booktabs}
             '''
 
 # By default TeX rendering is disabled, to enable call typeset inside module.
 typeset(usetex=False, preamble=False, fontsize=12)
+
+# By default verbose print statements inside functions are disabled,
+# set VERBOSE to True to modify global behaviour
+VERBOSE = False
 
 # Errorbar and Line2D properties for plots in order of appearance in lab
 GRID = {

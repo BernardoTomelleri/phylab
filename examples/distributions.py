@@ -55,14 +55,12 @@ else:
     genetic_pars = lab.gen_init(model=model, coords=[x, data],
                                 bounds=par_bounds, unc=dy)
     pars, covm, deff = lab.propfit(model, x, data, dx=dx, dy=dy,
-                                   p0=genetic_pars, alg='lm')
+                                   p0=genetic_pars, alg='lm', chimin=1)
     popt, pcov, out = lab.ODRfit(ODR_lorentz, x, data, dx=dx, dy=dy, p0=init)
     perr, pcor = lab.errcor(pcov)
 
 # Standard graph with residuals
-if tex:
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
+lab.rc.typeset(usetex=tex, fontsize=12)
 fig, (axf, axr) = lab.pltfitres(model, x, data, dy=deff, pars=pars)
 if gen:
     axf.set_ylabel('$f(x)$')
