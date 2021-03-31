@@ -78,9 +78,10 @@ if naive:
     perr_bands(axf, lin, x, pars=popt, perr=perr, fill=True)
 # Evaluate actual variance of model with delta method
 space = np.linspace(0.9*np.min(x), 1.05*np.max(x), 2000)
-mdist = np.sqrt((space - np.mean(x))**2/np.var(x, ddof=len(x) - 1))
+mdist = space - np.mean(x)
 gradients = np.array([np.ones_like(mdist), mdist])
-upb, lob, delta = conf_delta(x, gradients, lin(space, *popt), pcov)
+upb, lob, delta = conf_delta(x, gradients, lin(space, *popt), pcov,
+                             cov_scale=1./chisq)
 lab.plot_band(axf, space, upb, lob, delta, fill=False, ci=0.95)
 axf.set_ylabel('$\Delta V$ [V]')
 axr.set_xlabel('ADC reading [digit]', x=0.8)

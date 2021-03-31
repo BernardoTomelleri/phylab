@@ -48,7 +48,7 @@ from phylab.rc import (
 # Standard argument order for periodical functions:
 # A: Amplitude, frq: frequency, phs: phase, ofs: DC offset, tau: damp time
 args = namedtuple('pars', 'A frq phs ofs')
-goodness = namedtuple('ANOVA', 'chi ndof chi_pval R aR F F_pval')
+goodness = namedtuple('ANOVA', 'chi ndof chi_pval R aR F F_pval AIC AICc BIC DWS')
 
 def sine(t, A, frq, phs=0, ofs=0):
     """ Sinusoidal model function. Standard argument order """
@@ -246,10 +246,15 @@ def weighted_squares(model, x, y, dx, dy, pars, resx):
     """
     return np.sum(((model(x + resx, *pars) - y)/dy)**2) + np.sum((resx/dx)**2)
 
-def R_squared(observed, predicted, uncertainty=1):
-    """ Returns R square measure of goodness of fit for predicted model. """
+def R_squared(observed, expected, uncertainty=1):
+    """
+    Returns R square measure of goodness of fit for expected model. Values of
+    R range between -inf < R < 1. For a good fit the dispersion around the
+    model should be smaller than the dispersion of data around the mean. R ~ 1
+
+    """
     weight = 1./uncertainty
-    return 1. - (np.var((observed - predicted)*weight) / np.var(observed*weight))
+    return 1. - (np.var((observed - expected)*weight) / np.var(observed*weight))
 
 def adjusted_R(model, coords, popt, unc=1):
     """
@@ -260,17 +265,23 @@ def adjusted_R(model, coords, popt, unc=1):
     Lord : (n + p - 1)/(n - p - 1)
     Stein : (n - 1)/(n - p - 1) * (n - 2)/(n - p - 2) * (n + 1)/n
 
+    Notice: R squared is adjusted downwards i.e. adj_R < R to favor simpler
+    models with the least amount of parameters in order to prevent overfitting.
+
     """
     x, y = coords
     R = R_squared(y, model(x, *popt), uncertainty=unc)
     n, p = len(y), len(popt)
     coefficient = (n - 1)/(n - p - 1)
     adj = 1 - (1 - R) * coefficient
-    return adj, R
+    return R, adj
 
 def Ftest(model, coords, popt, unc=1):
     """
     One tailed Fisher test for variance of fitted vs constant model.
+    F ~ ratio of variance expected from the model to variance of residuals.
+    For a good fit we expect the variation of the model from the mean to be
+    greater than the variation of the residuals from the model ~ F >> 1
 
     """
     x, y = coords
@@ -279,15 +290,75 @@ def Ftest(model, coords, popt, unc=1):
     SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
     return SSM/len(popt) / chired
 
-def t_test(pars, perr):
+def AIC(model, x, y, popt, unc=None):
     """
-    Returns (one-sided) t-statistic values and probabilities for fit
-    parameters with standard deviation perr.
+    Akaike's Information Criterion for least squares fit of model to measured
+    y values with associated uncertainty unc.
+    The lower the AIC value, the better a candidate model fits the data.
+
+    Notice: least squares fitting assumes errors are gaussian with known
+    standard deviation sigma, which should be counted as statistical parameter
+    when evaluating AIC. Total number of parameters is therefore (p + 1).
+
+    Akaike's Information Criterion assumes the sample size n is sufficiently
+    large relative to the number p of parameters which must be estimated.
+    In the case of small sample sizes, but at least n >= 2p AIC can be
+    corrected with an additional term ~ N/(N - p - 1)
 
     """
-    t_vals = pars/perr
-    p_vals = stats.t.sf(np.abs(t_vals), df=len(pars))
-    return t_vals, p_vals
+    n, p = len(y), len(popt)
+    chisq = chitest(model(x, *popt), y, unc=unc, ddof=p)[0]
+    aic = 2*(p + 1) + n*(np.log(chisq/n * 2*np.pi) + 1)
+
+    # if fit is by Weighted Least Squares adds 2 sum(ln weights) term
+    if unc is not None:
+        if np.isscalar(unc):
+            aic += 2*n * (-2*np.log(unc))
+        else:
+            aic += 2 * np.sum(-2*np.log(unc))
+
+    # Correction for small sample size: n/p < 40
+    corrected = aic + 2*(p + 1)*(p + 2)/(n - p)
+    return aic, corrected
+
+def BIC(model, x, y, popt, unc=1):
+    """
+    Bayes Information Criterion for least squares fit of model to measured
+    y values with associated uncertainty unc. Just like AIC this is an
+    estimator of prediction error/goodness of fit for model comparison, but
+    this imposes a higher penalty (to prevent overfitting) on the number of
+    parameters in the model: AIC ~ 2p < p log(n) ~ BIC
+
+    Notice: least-squares fitting assumes errors are gaussian with known
+    standard deviation sigma, which should be counted as a statistical
+    parameter when evaluating BIC. Thus total number of parameters is (p + 1)
+
+    """
+    n, p = len(y), len(popt)
+    chisq = chitest(model(x, *popt), y, unc=unc, ddof=p)[0]
+    bic = (p + 1)*np.log(n) + n * (np.log(chisq/n * 2*np.pi) + 1)
+
+    # if fit is by Weighted Least Squares adds 2 sum(ln weights) term
+    if unc is not None:
+        if np.isscalar(unc):
+            bic += 2*n * (-2*np.log(unc))
+        else:
+            bic += 2 * np.sum(-2*np.log(unc))
+
+    return bic
+
+def DWS(model, x, y, popt, unc=1):
+    """
+    Durbin-Watson (test) Statistic to detect the presence of autocorrelation
+    in the residuals of the regression. DWS values range between 0 and 4.
+
+    A value close to zero indicates positive autocorrelation between residuals.
+    A value close to 4 indicates negative autocorrelation between residuals.
+    A value around 2 indicates no signicant auto-correlation could be detected.
+
+    """
+    chisq, ndof, resn = chitest(model(x, *popt), y, unc=unc, ddof=len(popt))
+    return np.sum(np.diff(resn)**2)/chisq
 
 def fit_test(model, coords, popt, unc=1, v=VERBOSE):
     """
@@ -312,19 +383,25 @@ def fit_test(model, coords, popt, unc=1, v=VERBOSE):
 
     """
     x, y = coords
-    ddof = len(popt)
+    ddof = len(y), len(popt)
     chisq, ndof, resn = chitest(model(x, *popt), y, unc=unc, ddof=ddof)
     chi_pval = stats.chi2.sf(chisq, ndof)
-    adj_R, R = adjusted_R(model, coords, popt)
 
+    # Variance of residuals tests
+    R, adj_R = adjusted_R(model, coords, popt)
     SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
     F = SSM/ddof / (chisq/ndof)
     F_pval = stats.f.sf(F, ddof, ndof)
+    dws = np.sum(np.diff(resn)**2)/np.sum(resn**2)
 
-    ANOVA = goodness(chisq, ndof, chi_pval, R, adj_R, F, F_pval)
+    # Information criteria
+    aic, cor_aic = AIC(model=model, x=x, y=y, popt=popt, unc=unc)
+    bic = BIC(model=model, x=x, y=y, popt=popt, unc=unc)
+
+    ANOVA = goodness(chisq, ndof, chi_pval, R, adj_R, F, F_pval, aic, cor_aic,
+                     bic, dws)
     if v:
         print(ANOVA)
-        #prnpar(pars=ANOVA, perr=np.zeros(len(ANOVA)), manual=ANOVA._fields)
     return ANOVA
 
 def conf_delta(x, dfdp, expected, pcov, ci=0.95, cov_scale=1):
@@ -385,6 +462,17 @@ def corr_pval(corm, npts):
         for j in range(1 + i, np.size(corm, 1)):
             correlations.append(corm[i, j])
     return np.asarray(correlations), 2*beta.cdf(-np.abs(correlations))
+
+def t_test(pars, perr):
+    """
+    Student's t-test for the true value of model parameters being zero.
+    Returns one-sided t-statistic values (or z-scores) and probabilities
+    (or p-values) for fit parameters with standard deviation perr.
+
+    """
+    t_vals = pars/perr
+    p_vals = stats.t.sf(np.abs(t_vals), df=len(pars))
+    return t_vals, p_vals
 
 def conf_popt(pars, perr, ndof, ci=0.95):
     """
@@ -699,14 +787,14 @@ def propfit(model, xmes, ymes, dx=0., dy=None, p0=None, alg='lm',
                                absolute_sigma=False)
         deff = np.sqrt(deff**2 + (dx * fder(model, xmes, popt))**2)
         plist.append(popt)
-        elist.append(errcor(pcov)[0])
+        elist.append(np.sqrt(pcov.diagonal()))
 
         # Condition for popt convergence: if the last tail optimal parameter
         # estimates all differ by less than tol errorbars from one another
         # |in absolute value|, they are considered equivalent and no more
         # iterations are necessary. Type is boolean like neg and chired.
         con = ldec(np.abs(np.diff(plist[-tail:], axis=0)),
-                   upb=elist[-tail]*rtol) if n >= tail else False
+                   upb=elist[-1]*rtol) if n + 1 >= tail else False
         neg = all(deff > thr*(dx * np.mean(np.abs(fder(model, xmes, popt)))))
         chisq, ndof = chitest(model(xmes, *popt), ymes, deff, ddof=len(popt))[:-1]
         chired = chisq/ndof < chimin
@@ -789,7 +877,7 @@ def ODRfit(model, xmes, ymes, dx=0, dy=1, p0=None, fixed_pars=None):
     # fixes that parameter, any other value > 0 leaves the parameter free.
     if fixed_pars is not None:
         fixed_beta = [0 if bol else 1 for bol in fixed_pars]
-        ndof = len(ymes) - len(p0) - fixed_beta.count(0)
+        ndof = len(ymes) - len(p0) + fixed_beta.count(0)
     else:
         fixed_beta = fixed_pars
         ndof = len(ymes) - len(p0)
