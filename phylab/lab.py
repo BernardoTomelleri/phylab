@@ -383,7 +383,7 @@ def fit_test(model, coords, popt, unc=1, v=VERBOSE):
 
     """
     x, y = coords
-    ddof = len(y), len(popt)
+    ddof = len(popt)
     chisq, ndof, resn = chitest(model(x, *popt), y, unc=unc, ddof=ddof)
     chi_pval = stats.chi2.sf(chisq, ndof)
 
