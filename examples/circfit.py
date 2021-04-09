@@ -27,13 +27,27 @@ def test_circle_fit():
     """
     This test was extracted from the paper: "Least-Squares Circle" Fit
     by Randy Bullock. It test the correctness of the fit.
+    
     """
     x = np.array([0.000, 0.500, 1.000, 1.500, 2.000, 2.500, 3.000])
     y = np.array([0.000, 0.250, 1.000, 2.250, 4.000, 6.250, 9.000])
     coords = np.array([x, y])
     (xc, yc), r = lab.coope(coords)
-    assert xc + 11.839 < 0.001 and yc - 8.4464 < 0.0001 and r - 14.686 < 0.001
+    assert xc + 11.839 < 1e-3 and yc - 8.4464 < 1e-4 and r - 14.686 < 1e-3
 
+def test_ellipse_fit():
+    """
+    This test was extracted from the paper: "Least-Squares Fitting of Circles
+    and Ellipses" by W. Gander et al. It test the correctness of the fit.
+    
+    """
+    x = np.array([1, 2, 5, 7, 9, 3, 6, 8])
+    y = np.array([7, 6, 8, 7, 5, 7, 2, 4])
+    coords = np.array([x, y])
+    sol, chisq, pcov = lab.elpfit(coords)
+    xc, yc, a, b, angle = sol
+    assert xc - 2.6996 < 1e-4 and yc - 3.8160 < 1e-4 and a - 6.5187 < 1e-4 and b - 3.0319 < 1e-4
+    
 if gen:
     data = np.asarray(Ell_coords(*init, step=npts))
     noise = np.random.normal(loc=0, scale=0.1*init[2], size=data.shape)

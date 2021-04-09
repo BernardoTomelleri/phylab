@@ -290,6 +290,33 @@ def Ftest(model, coords, popt, unc=1):
     SSM = residual_squares(popt, model, [x, np.mean(y)], unc=unc)
     return SSM/len(popt) / chired
 
+def Fmodel_comparison(models, coords, popts, unc=1):
+    """
+    One tailed Fisher test for comparing variance of simple vs complex model.
+    If 2 models have the same number of parameters F = simple_chi/complex_chi.
+
+    When comparing 2 models with different amounts of parameters the F test
+    is extended to answer whether the improved fit from a complex model
+    (with more parameters) is worth the loss in degrees of freedom.
+
+    A large F value/small p-value indicates that the more complex model fits
+    the data significantly better than the simpler model.
+
+    """
+    x, y = coords
+    simodel, comodel = models
+    simpars, compars = popts
+
+    simchi, simdof = chitest(simodel(x, *simpars), y, unc=unc,
+                             ddof=len(simpars))[:2]
+    comchi, comdof = chitest(comodel(x, *compars), y, unc=unc,
+                             ddof=len(compars))[:2]
+
+    F = (simchi - comchi)/(simdof - comdof) / (comchi/comdof)
+    pval = stats.f.sf(F, dfn=simdof - comdof, dfd=comdof)
+    return F, pval
+
+
 def AIC(model, x, y, popt, unc=None):
     """
     Akaike's Information Criterion for least squares fit of model to measured

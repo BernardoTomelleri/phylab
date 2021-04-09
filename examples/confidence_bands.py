@@ -31,7 +31,7 @@ def perr_bands(ax, model, x, pars, perr=1, nstd=1, fill=False):
         ax.fill_between(space, pred_lo, pred_up, color=color, alpha=0.3)
     return line_up, line_lo
 
-def conf_delta(x, dfdp, expected, pcov, ci=0.95, covscale=1):
+def conf_delta(x, dfdp, expected, pcov, ci=0.95, cov_scale=1):
     """
     Generates upper and lower confidence bands for expected model using delta
     method: given vector of partial derivatives of model with respect to
@@ -50,7 +50,7 @@ def conf_delta(x, dfdp, expected, pcov, ci=0.95, covscale=1):
     for i in range(p):
         for j in range(p):
             df2 += dfdp[i] * dfdp[j] * pcov[i, j]
-    model_stdev = np.sqrt(covscale*df2)
+    model_stdev = np.sqrt(cov_scale*df2)
     # In a more geometric/Pythonic way, where dfdp.T is a column of gradients
     # written as rows evaluated at every sampled point of the expected model
     # model_stdev = np.array([np.sqrt(grad.T @ pcov @ grad) for grad in dfdp.T])
@@ -76,6 +76,7 @@ lab.rc.typeset(usetex=tex, fontsize=12)
 fig, (axf, axr) = lab.pltfitres(lin, x, y, dy=dy, pars=popt)
 if naive:
     perr_bands(axf, lin, x, pars=popt, perr=perr, fill=True)
+
 # Evaluate actual variance of model with delta method
 space = np.linspace(0.9*np.min(x), 1.05*np.max(x), 2000)
 mdist = space - np.mean(x)
